@@ -31,8 +31,39 @@ export default function IssueDetailsPage() {
     setAddress(storedAddress);
     setNewAddress(storedAddress);
     
-    // Fetch representatives
-    fetchRepresentatives(storedAddress);
+    // Check if we have draft data from previous visit
+    const storedDraftData = localStorage.getItem('draftData');
+    if (storedDraftData) {
+      try {
+        const {
+          demands: storedDemands,
+          personalInfo: storedPersonalInfo,
+          selectedReps: storedSelectedReps
+        } = JSON.parse(storedDraftData);
+        
+        // Restore demands and personal info
+        if (Array.isArray(storedDemands) && storedDemands.length > 0) {
+          setDemands(storedDemands);
+        }
+        
+        if (storedPersonalInfo) {
+          setPersonalInfo(storedPersonalInfo);
+        }
+        
+        // We'll restore selected reps after fetching representatives
+        const selectedRepsSet = new Set(storedSelectedReps || []);
+        
+        // Fetch representatives and then restore selection
+        fetchRepresentatives(storedAddress, selectedRepsSet);
+      } catch (error) {
+        console.error('Error restoring draft data:', error);
+        // Fetch representatives normally if there's an error
+        fetchRepresentatives(storedAddress);
+      }
+    } else {
+      // Fetch representatives normally if there's no stored draft data
+      fetchRepresentatives(storedAddress);
+    }
   }, [router]);
   
   // Set up Google Maps autocomplete when editing address
@@ -91,7 +122,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string) => {
+  const fetchRepresentatives = async (address: string, initialSelectedReps?: Set<number>) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -115,11 +146,26 @@ export default function IssueDetailsPage() {
       
       setLoadingProgress(100);
       
-      // Select all representatives by default
-      const initialSelected = new Set(reps.map((_, index) => index));
-      
       setRepresentatives(reps);
-      setSelectedReps(initialSelected);
+      
+      // If we have previously selected representatives, use those
+      // Otherwise select all representatives by default
+      if (initialSelectedReps && initialSelectedReps.size > 0) {
+        // Filter out any invalid indexes
+        const validSelectedReps = new Set(
+          [...initialSelectedReps].filter(index => index < reps.length)
+        );
+        
+        // If all previously selected reps are invalid, select all by default
+        if (validSelectedReps.size === 0) {
+          setSelectedReps(new Set(reps.map((_, index) => index)));
+        } else {
+          setSelectedReps(validSelectedReps);
+        }
+      } else {
+        // Select all representatives by default
+        setSelectedReps(new Set(reps.map((_, index) => index)));
+      }
     } catch (error) {
       if (progressInterval) {
         clearInterval(progressInterval);
