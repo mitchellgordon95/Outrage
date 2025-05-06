@@ -98,3 +98,14 @@ Future enhancements to consider:
    - Track email open rates (would require sending through our servers)
    - Aggregate common issues across campaigns
    - Visualize geographic distribution of concerns
+
+5. **Enhanced Draft Features**:
+   - Accept user feedback on drafts and offer rewrites
+   - Allow users to select different tones (formal, assertive, personal)
+   - Provide options to customize draft length and complexity
+
+6. **Fact Research Assistant**:
+   - Help users research issues they care about
+   - Suggest credible sources and statistics to strengthen arguments
+   - Provide context about relevant legislation and policy positions
+   - Generate fact-based talking points on demand
