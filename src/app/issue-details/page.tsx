@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Representative, getRepresentativesByAddress } from '@/services/representatives';
 
 export default function IssueDetailsPage() {
@@ -17,20 +18,79 @@ export default function IssueDetailsPage() {
   const [draftSubject, setDraftSubject] = useState('');
   const [draftContent, setDraftContent] = useState('');
   const [isDraftLoading, setIsDraftLoading] = useState(false);
+  const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [newAddress, setNewAddress] = useState('');
+  const addressInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Get the address from localStorage
     const storedAddress = localStorage.getItem('userAddress');
     if (!storedAddress) {
-      router.push('/address');
+      router.push('/'); // Redirect to home page to enter address
       return;
     }
     
     setAddress(storedAddress);
+    setNewAddress(storedAddress);
     
     // Fetch representatives
     fetchRepresentatives(storedAddress);
   }, [router]);
+  
+  // Set up Google Maps autocomplete when editing address
+  useEffect(() => {
+    if (!isEditingAddress || !addressInputRef.current) return;
+    
+    // Check if the API key is available
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    
+    if (!apiKey) {
+      console.error('Google Maps API key is missing');
+      return;
+    }
+    
+    // Check if the Google Maps script is already loaded
+    if (window.google && window.google.maps && window.google.maps.places) {
+      initAddressAutocomplete();
+      return;
+    }
+    
+    // Load Google Maps API script
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = initAddressAutocomplete;
+    script.onerror = () => {
+      console.error('Failed to load Google Maps API script');
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // Only remove if it exists
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, [isEditingAddress]);
+  
+  const initAddressAutocomplete = () => {
+    if (!addressInputRef.current || !window.google) return;
+    
+    const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+      componentRestrictions: { country: 'us' },
+      fields: ['address_components', 'formatted_address', 'geometry'],
+      types: ['address']
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (place && place.formatted_address) {
+        setNewAddress(place.formatted_address);
+      }
+    });
+  };
   
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -105,8 +165,51 @@ export default function IssueDetailsPage() {
     }
     setSelectedReps(newSelected);
   };
+  
+  const handleEditAddress = () => {
+    setIsEditingAddress(true);
+  };
+  
+  const handleCancelEditAddress = () => {
+    setIsEditingAddress(false);
+    setNewAddress(address); // Reset to current address
+  };
+  
+  const handleSaveAddress = () => {
+    if (!newAddress.trim()) return;
+    
+    // Save to localStorage and update state
+    localStorage.setItem('userAddress', newAddress);
+    setAddress(newAddress);
+    setIsEditingAddress(false);
+    
+    // Fetch representatives for the new address
+    fetchRepresentatives(newAddress);
+  };
+
+  const handleOpenPersonalInfoModal = () => {
+    setShowPersonalInfoModal(true);
+  };
+
+  const handleClosePersonalInfoModal = () => {
+    setShowPersonalInfoModal(false);
+  };
 
   const handleGenerateDraft = async () => {
+    // First check if there are any facts entered
+    if (facts.every(f => !f.trim())) {
+      return;
+    }
+    
+    // Open personal info modal before generating draft
+    handleOpenPersonalInfoModal();
+  };
+
+  const handleSubmitPersonalInfo = async () => {
+    // Close the modal
+    setShowPersonalInfoModal(false);
+    
+    // Now generate the draft
     setIsDraftLoading(true);
     
     try {
@@ -163,17 +266,65 @@ export default function IssueDetailsPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 bg-gray-50">
+      {/* Header with title that links back home */}
+      <header className="w-full max-w-4xl flex justify-between items-center mb-6">
+        <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-primary">
+          Outrage
+        </Link>
+      </header>
+      
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold mb-6">Issue Details</h1>
-        
-        {/* Address display */}
+        {/* Address display with change button */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">
-          <p className="font-medium">Your address:</p>
-          <p>{address}</p>
+          {isEditingAddress ? (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <p className="font-medium">Update your address:</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={addressInputRef}
+                  type="text"
+                  value={newAddress}
+                  onChange={(e) => setNewAddress(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter your full address"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveAddress}
+                    className="px-3 py-1 bg-primary text-white rounded hover:bg-opacity-90 text-sm"
+                    disabled={!newAddress.trim()}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEditAddress}
+                    className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">Your address:</p>
+                <p>{address}</p>
+              </div>
+              <button
+                onClick={handleEditAddress}
+                className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm"
+              >
+                Change
+              </button>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left column: Facts and personal info */}
+          {/* Left column: Facts */}
           <div>
             <h2 className="text-xl font-semibold mb-4">What issues concern you?</h2>
             <div className="space-y-4 mb-6">
@@ -202,36 +353,6 @@ export default function IssueDetailsPage() {
             >
               + Add Another Fact
             </button>
-            
-            <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block mb-1 font-medium">
-                  Your Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  placeholder="e.g. Jane Smith"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="voting-history" className="block mb-1 font-medium">
-                  Your Voting History / Demographic Info
-                </label>
-                <textarea
-                  id="voting-history"
-                  value={votingHistory}
-                  onChange={(e) => setVotingHistory(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
-                  placeholder="e.g. I've voted in every election since 2008. I'm a parent of two children in public schools."
-                />
-              </div>
-            </div>
           </div>
           
           {/* Right column: Representatives */}
@@ -257,9 +378,7 @@ export default function IssueDetailsPage() {
                 <div className="mb-4 text-sm text-gray-700">
                   <p>Possible solutions:</p>
                   <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>Verify that your Google Civic API key is correct in .env.local</li>
-                    <li>Make sure the API key has the Google Civic Information API enabled</li>
-                    <li>Check that you entered a valid US address on the previous screen</li>
+                    <li>Check that you entered a valid US address</li>
                     <li>Try a different address if the problem persists</li>
                   </ul>
                 </div>
@@ -270,9 +389,9 @@ export default function IssueDetailsPage() {
                   >
                     Retry
                   </button>
-                  <button
-                    onClick={() => router.push('/address')}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                  <button 
+                    onClick={handleEditAddress}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 inline-flex items-center"
                   >
                     Change Address
                   </button>
@@ -346,6 +465,62 @@ export default function IssueDetailsPage() {
           </div>
         )}
       </div>
+      
+      {/* Personal Information Modal */}
+      {showPersonalInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
+            <p className="text-gray-600 mb-4 text-sm">
+              This information will be included in your email to make it more effective.
+            </p>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label htmlFor="name" className="block mb-1 font-medium">
+                  Your Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  placeholder="e.g. Jane Smith"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="voting-history" className="block mb-1 font-medium">
+                  Your Voting History / Demographic Info
+                </label>
+                <textarea
+                  id="voting-history"
+                  value={votingHistory}
+                  onChange={(e) => setVotingHistory(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
+                  placeholder="e.g. I've voted in every election since 2008. I'm a parent of two children in public schools."
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-between">
+              <button 
+                onClick={handleClosePersonalInfoModal}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Skip
+              </button>
+              <button 
+                onClick={handleSubmitPersonalInfo}
+                className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
