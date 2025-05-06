@@ -60,18 +60,17 @@ GOOGLE_CIVIC_API_KEY=your_google_civic_api_key
 
 ### Representative Lookup Implementation
 
-For finding elected representatives based on user address, the **Google Civic Information API** is the recommended solution:
+Currently using a CSV file provided by the Governance Project at techandciviclife.org for elected officials data.
 
-- **Endpoint**: Representatives lookup by address
-- **Features**:
-  - Free service (up to 25,000 queries per day)
-  - Returns representatives at all levels (local, state, federal)
-  - Provides name, office, contact information (including email)
-  - Returns representative data organized by political geography
-- **Implementation**: Requires Google API key with the Civic Information API enabled
-- **Documentation**: [Google Civic Information API](https://developers.google.com/civic-information)
+- **Implementation**: Data is loaded from a CSV file with representative information
+- **Future Consideration**: May use Google Civic Information API as an alternative or enhancement
 
 Alternative/backup approaches:
+- **Google Civic Information API**: 
+  - Free service (up to 25,000 queries per day)
+  - Returns election information and officials at various government levels
+  - Provides polling locations, ballot information, and election administration details
+  - Organizes information based on political geography of an address
 - **OpenStates API**: Provides state-level representatives via the `/people.geo` endpoint
 - Custom scraping solution from government websites (more maintenance, less reliable)
 
@@ -93,6 +92,7 @@ Future enhancements to consider:
    - Identify and contact candidates running for office (not just incumbents)
    - Provide information about candidates' positions on issues
    - Track candidate responses to user emails
+   - May use Google Civic API for election candidates information
 
 4. **Advanced Analytics**:
    - Track email open rates (would require sending through our servers)

@@ -32,12 +32,18 @@ export default function IssueDetailsPage() {
     fetchRepresentatives(storedAddress);
   }, [router]);
   
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const fetchRepresentatives = async (address: string) => {
+    let progressInterval: NodeJS.Timeout | null = null;
+    
     try {
       setIsLoading(true);
+      setApiError(null);
+      setLoadingProgress(0);
       
       // Simulate progress for UX
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
           const newProgress = prev + 5;
           return newProgress > 90 ? 90 : newProgress;
@@ -46,7 +52,10 @@ export default function IssueDetailsPage() {
       
       const reps = await getRepresentativesByAddress(address);
       
-      clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
       setLoadingProgress(100);
       
       // Select all representatives by default
@@ -55,7 +64,17 @@ export default function IssueDetailsPage() {
       setRepresentatives(reps);
       setSelectedReps(initialSelected);
     } catch (error) {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
       console.error('Error fetching representatives:', error);
+      
+      if (error instanceof Error) {
+        setApiError(error.message);
+      } else {
+        setApiError('An unexpected error occurred while fetching representatives');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -229,6 +248,36 @@ export default function IssueDetailsPage() {
                 </div>
                 <p>Loading your representatives...</p>
               </div>
+            ) : apiError ? (
+              <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-md">
+                <h2 className="text-lg font-semibold text-red-600 mb-2">Error Loading Representatives</h2>
+                <p className="text-red-700 mb-4">
+                  {apiError}
+                </p>
+                <div className="mb-4 text-sm text-gray-700">
+                  <p>Possible solutions:</p>
+                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li>Verify that your Google Civic API key is correct in .env.local</li>
+                    <li>Make sure the API key has the Google Civic Information API enabled</li>
+                    <li>Check that you entered a valid US address on the previous screen</li>
+                    <li>Try a different address if the problem persists</li>
+                  </ul>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fetchRepresentatives(address)}
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={() => router.push('/address')}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                  >
+                    Change Address
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                 {representatives.map((rep, index) => (
@@ -253,7 +302,7 @@ export default function IssueDetailsPage() {
                   </div>
                 ))}
                 
-                {representatives.length === 0 && (
+                {representatives.length === 0 && !apiError && (
                   <div className="text-center py-4 text-gray-500">
                     No representatives found for your address.
                   </div>
