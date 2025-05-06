@@ -7,15 +7,14 @@ import { Representative, getRepresentativesByAddress } from '@/services/represen
 
 export default function IssueDetailsPage() {
   const router = useRouter();
-  const [facts, setFacts] = useState<string[]>(['']);
+  const DEFAULT_DEMAND = 'Do a better job';
+  const [demands, setDemands] = useState<string[]>([DEFAULT_DEMAND]);
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [address, setAddress] = useState('');
-  const [draftSubject, setDraftSubject] = useState('');
-  const [draftContent, setDraftContent] = useState('');
   const [isDraftLoading, setIsDraftLoading] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [newAddress, setNewAddress] = useState('');
@@ -138,20 +137,20 @@ export default function IssueDetailsPage() {
     }
   };
 
-  const handleAddFact = () => {
-    setFacts([...facts, '']);
+  const handleAddDemand = () => {
+    setDemands([...demands, '']);
   };
 
-  const handleFactChange = (index: number, value: string) => {
-    const newFacts = [...facts];
-    newFacts[index] = value;
-    setFacts(newFacts);
+  const handleDemandChange = (index: number, value: string) => {
+    const newDemands = [...demands];
+    newDemands[index] = value;
+    setDemands(newDemands);
   };
 
-  const handleRemoveFact = (index: number) => {
-    if (facts.length <= 1) return;
-    const newFacts = facts.filter((_, i) => i !== index);
-    setFacts(newFacts);
+  const handleRemoveDemand = (index: number) => {
+    if (demands.length <= 1) return;
+    const newDemands = demands.filter((_, i) => i !== index);
+    setDemands(newDemands);
   };
 
   const toggleRepresentative = (index: number) => {
@@ -186,86 +185,40 @@ export default function IssueDetailsPage() {
   };
 
   const handleGenerateDraft = async () => {
-    // First check if there are any facts entered
-    if (facts.every(f => !f.trim())) {
+    // First check if there are any valid demands entered
+    const validDemands = demands.filter(demand => demand.trim());
+    if (validDemands.length === 0) {
+      console.error('No valid demands to generate draft');
       return;
     }
     
-    // Generate the draft directly
     setIsDraftLoading(true);
     
     try {
-      // This would typically call an API endpoint that uses LiteLLM
-      // For now, we'll create a mock implementation
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log('Original demands:', demands);
+      console.log('Valid demands after filtering:', validDemands);
       
-      // Parse personal info to extract name
-      let name = '';
-      // If personalInfo has text that looks like a name, extract it
-      const nameMatch = personalInfo.match(/(?:name[:\s]+)?([\w\s]+)(?:[,.;]|$)/i);
-      if (nameMatch && nameMatch[1]) {
-        name = nameMatch[1].trim();
-      }
+      // Prepare data for draft generation
+      const draftData = {
+        demands: validDemands,
+        personalInfo: personalInfo.trim(),
+        representatives: representatives.filter((_, index) => selectedReps.has(index)),
+        selectedReps: Array.from(selectedReps)
+      };
       
-      // Creating a simple draft template based on the facts
-      const subject = `Concerns from a constituent about ${facts[0].substring(0, 30)}...`;
+      console.log('Draft data being saved:', draftData);
       
-      let content = `Dear Representative,\n\n`;
+      // Save to localStorage for the draft preview page
+      localStorage.setItem('draftData', JSON.stringify(draftData));
       
-      if (personalInfo.trim()) {
-        // If there's a name, add it to the letter
-        if (name) {
-          content += `My name is ${name}, and I am a constituent living in your district. `;
-          
-          // Add the rest of personal info, but skip any part that might have the name
-          const remainingInfo = personalInfo.replace(new RegExp(`${name}`, 'i'), '').trim();
-          if (remainingInfo) {
-            content += `${remainingInfo} `;
-          }
-        } else {
-          // Otherwise just add all the personal info
-          content += `I am a constituent living in your district. ${personalInfo} `;
-        }
-      } else {
-        content += `I am a concerned constituent living in your district. `;
-      }
-      
-      content += `I am writing to express my concerns about several issues that are important to me:\n\n`;
-      
-      facts.forEach((fact, index) => {
-        if (fact.trim()) {
-          content += `${index + 1}. ${fact}\n`;
-        }
-      });
-      
-      content += `\nI would appreciate hearing your position on these matters and what actions you are taking to address them. These issues affect me and many others in our community, and I believe they deserve your attention.\n\n`;
-      content += `Thank you for your time and consideration.\n\n`;
-      content += `Sincerely,\n${name || 'A Concerned Constituent'}`;
-      
-      setDraftSubject(subject);
-      setDraftContent(content);
+      // Navigate to the draft preview page where actual generation will happen
+      router.push('/draft-preview');
     } catch (error) {
-      console.error('Error generating draft:', error);
-    } finally {
+      console.error('Error preparing draft data:', error);
       setIsDraftLoading(false);
     }
   };
 
-  const handleSendEmails = () => {
-    // Create mailto links for each selected representative
-    representatives.forEach((rep, index) => {
-      if (selectedReps.has(index) && rep.emails && rep.emails.length > 0) {
-        const email = rep.emails[0];
-        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftContent)}`;
-        
-        // Open in a new tab
-        window.open(mailtoLink, '_blank');
-      }
-    });
-    
-    // Navigate to campaign creation page
-    // router.push('/campaign');
-  };
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 bg-gray-50">
@@ -327,22 +280,23 @@ export default function IssueDetailsPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left column: Facts and Personal Info */}
+          {/* Left column: Demands and Personal Info */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">What issues concern you?</h2>
-            <div className="space-y-4 mb-6">
-              {facts.map((fact, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <textarea
-                    value={fact}
-                    onChange={(e) => handleFactChange(index, e.target.value)}
-                    placeholder={`Fact ${index + 1} about an issue you care about`}
-                    className="flex-1 p-2 border border-gray-300 rounded-md min-h-[60px]"
+            <h2 className="text-xl font-semibold mb-4">Demands</h2>
+            <div className="space-y-3 mb-6">
+              {demands.map((demand, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={demand}
+                    onChange={(e) => handleDemandChange(index, e.target.value)}
+                    placeholder={`Enter your demand here`}
+                    className="flex-1 p-2 border border-gray-300 rounded-md"
                   />
                   <button
-                    onClick={() => handleRemoveFact(index)}
+                    onClick={() => handleRemoveDemand(index)}
                     className="p-2 text-red-500 hover:text-red-700"
-                    disabled={facts.length <= 1}
+                    disabled={demands.length <= 1}
                   >
                     ✕
                   </button>
@@ -351,10 +305,10 @@ export default function IssueDetailsPage() {
             </div>
             
             <button
-              onClick={handleAddFact}
+              onClick={handleAddDemand}
               className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
             >
-              + Add Another Fact
+              + Add Another Demand
             </button>
             
             <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
@@ -451,35 +405,17 @@ export default function IssueDetailsPage() {
         <div className="mt-8 mb-4">
           <button
             onClick={handleGenerateDraft}
-            disabled={isDraftLoading || facts.every(f => !f.trim())}
+            disabled={
+              isDraftLoading || 
+              representatives.length === 0 || 
+              selectedReps.size === 0 || 
+              demands.filter(d => d.trim()).length === 0
+            }
             className="w-full py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isDraftLoading ? 'Generating Draft...' : 'Generate Draft'}
+            {isDraftLoading ? 'Generating Draft...' : 'Preview Draft'}
           </button>
         </div>
-        
-        {/* Email Draft */}
-        {draftContent && (
-          <div className="mt-6 border border-gray-300 rounded-md p-4">
-            <h2 className="text-xl font-semibold mb-2">Email Draft</h2>
-            <div className="mb-2">
-              <span className="font-medium">Subject:</span> {draftSubject}
-            </div>
-            <div className="whitespace-pre-line bg-gray-50 p-3 rounded border border-gray-200">
-              {draftContent}
-            </div>
-            
-            <div className="mt-4">
-              <button
-                onClick={handleSendEmails}
-                className="w-full py-3 bg-primary text-white rounded-md hover:bg-opacity-90"
-                disabled={selectedReps.size === 0}
-              >
-                Send Emails ({selectedReps.size} {selectedReps.size === 1 ? 'representative' : 'representatives'})
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
