@@ -89,7 +89,13 @@ My personal info: ${personalInfo || "I'm a constituent"}
 My demands:
 ${demandsText}
 
-The email should be direct and assertive. Make the subject line relevant to the first demand.
+Important guidelines:
+- The email should be direct and assertive
+- Make the subject line relevant to the first demand
+- Do NOT include any placeholders like [Your Name] or [Your Address]
+- If personal info is provided, use it to personalize the email
+- If no personal info is provided, sign as "A Concerned Constituent"
+- Do not include fields for the user to fill in manually
 
 Format your response in plain text like this:
 Subject: [subject line here]
