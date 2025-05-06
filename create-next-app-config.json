@@ -1,0 +1,8 @@
+{
+  "typescript": true,
+  "eslint": true,
+  "tailwind": true,
+  "src-dir": true,
+  "app-router": true,
+  "import-alias": "@/*"
+}
