@@ -8,8 +8,7 @@ import { Representative, getRepresentativesByAddress } from '@/services/represen
 export default function IssueDetailsPage() {
   const router = useRouter();
   const [facts, setFacts] = useState<string[]>(['']);
-  const [name, setName] = useState('');
-  const [votingHistory, setVotingHistory] = useState('');
+  const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +17,6 @@ export default function IssueDetailsPage() {
   const [draftSubject, setDraftSubject] = useState('');
   const [draftContent, setDraftContent] = useState('');
   const [isDraftLoading, setIsDraftLoading] = useState(false);
-  const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [newAddress, setNewAddress] = useState('');
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -187,29 +185,13 @@ export default function IssueDetailsPage() {
     fetchRepresentatives(newAddress);
   };
 
-  const handleOpenPersonalInfoModal = () => {
-    setShowPersonalInfoModal(true);
-  };
-
-  const handleClosePersonalInfoModal = () => {
-    setShowPersonalInfoModal(false);
-  };
-
   const handleGenerateDraft = async () => {
     // First check if there are any facts entered
     if (facts.every(f => !f.trim())) {
       return;
     }
     
-    // Open personal info modal before generating draft
-    handleOpenPersonalInfoModal();
-  };
-
-  const handleSubmitPersonalInfo = async () => {
-    // Close the modal
-    setShowPersonalInfoModal(false);
-    
-    // Now generate the draft
+    // Generate the draft directly
     setIsDraftLoading(true);
     
     try {
@@ -217,14 +199,35 @@ export default function IssueDetailsPage() {
       // For now, we'll create a mock implementation
       await new Promise(resolve => setTimeout(resolve, 1500));
       
+      // Parse personal info to extract name
+      let name = '';
+      // If personalInfo has text that looks like a name, extract it
+      const nameMatch = personalInfo.match(/(?:name[:\s]+)?([\w\s]+)(?:[,.;]|$)/i);
+      if (nameMatch && nameMatch[1]) {
+        name = nameMatch[1].trim();
+      }
+      
       // Creating a simple draft template based on the facts
       const subject = `Concerns from a constituent about ${facts[0].substring(0, 30)}...`;
       
       let content = `Dear Representative,\n\n`;
-      content += `My name is ${name || 'a concerned citizen'}, and I am a constituent living in your district. `;
       
-      if (votingHistory) {
-        content += `${votingHistory} `;
+      if (personalInfo.trim()) {
+        // If there's a name, add it to the letter
+        if (name) {
+          content += `My name is ${name}, and I am a constituent living in your district. `;
+          
+          // Add the rest of personal info, but skip any part that might have the name
+          const remainingInfo = personalInfo.replace(new RegExp(`${name}`, 'i'), '').trim();
+          if (remainingInfo) {
+            content += `${remainingInfo} `;
+          }
+        } else {
+          // Otherwise just add all the personal info
+          content += `I am a constituent living in your district. ${personalInfo} `;
+        }
+      } else {
+        content += `I am a concerned constituent living in your district. `;
       }
       
       content += `I am writing to express my concerns about several issues that are important to me:\n\n`;
@@ -324,7 +327,7 @@ export default function IssueDetailsPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left column: Facts */}
+          {/* Left column: Facts and Personal Info */}
           <div>
             <h2 className="text-xl font-semibold mb-4">What issues concern you?</h2>
             <div className="space-y-4 mb-6">
@@ -349,10 +352,23 @@ export default function IssueDetailsPage() {
             
             <button
               onClick={handleAddFact}
-              className="mb-8 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
+              className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
             >
               + Add Another Fact
             </button>
+            
+            <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
+            <div className="mb-8">
+              <textarea
+                value={personalInfo}
+                onChange={(e) => setPersonalInfo(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
+                placeholder="Name, Party Affiliation, Demographic Info, etc."
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                This information will make your email more personal and effective.
+              </p>
+            </div>
           </div>
           
           {/* Right column: Representatives */}
@@ -465,62 +481,6 @@ export default function IssueDetailsPage() {
           </div>
         )}
       </div>
-      
-      {/* Personal Information Modal */}
-      {showPersonalInfoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
-            <p className="text-gray-600 mb-4 text-sm">
-              This information will be included in your email to make it more effective.
-            </p>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <label htmlFor="name" className="block mb-1 font-medium">
-                  Your Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  placeholder="e.g. Jane Smith"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="voting-history" className="block mb-1 font-medium">
-                  Your Voting History / Demographic Info
-                </label>
-                <textarea
-                  id="voting-history"
-                  value={votingHistory}
-                  onChange={(e) => setVotingHistory(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
-                  placeholder="e.g. I've voted in every election since 2008. I'm a parent of two children in public schools."
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-between">
-              <button 
-                onClick={handleClosePersonalInfoModal}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Skip
-              </button>
-              <button 
-                onClick={handleSubmitPersonalInfo}
-                className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
