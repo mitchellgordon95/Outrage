@@ -172,6 +172,10 @@ export default function IssueDetailsPage() {
         clearInterval(progressInterval);
       }
       
+      // Log officials without email
+      const repsWithoutEmail = reps.filter(rep => !rep.emails || rep.emails.length === 0);
+      console.log(`Representatives without email: ${repsWithoutEmail.length}/${reps.length}`);
+      
       setLoadingProgress(100);
       
       setRepresentatives(reps);
@@ -223,18 +227,30 @@ export default function IssueDetailsPage() {
   };
 
   const toggleRepresentative = (index: number) => {
-    const newSelected = new Set(selectedReps);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
+    // Check if the representative has an email
+    const rep = representatives[index];
+    const hasEmail = rep?.emails && rep.emails.length > 0;
+    
+    // Only allow toggling if the representative has an email
+    if (hasEmail) {
+      const newSelected = new Set(selectedReps);
+      if (newSelected.has(index)) {
+        newSelected.delete(index);
+      } else {
+        newSelected.add(index);
+      }
+      setSelectedReps(newSelected);
     }
-    setSelectedReps(newSelected);
   };
   
   const handleSelectAll = () => {
-    // Select all representatives
-    setSelectedReps(new Set(representatives.map((_, index) => index)));
+    // Select all representatives that have email addresses
+    const representativesWithEmail = representatives
+      .map((rep, index) => ({ rep, index }))
+      .filter(item => item.rep.emails && item.rep.emails.length > 0)
+      .map(item => item.index);
+    
+    setSelectedReps(new Set(representativesWithEmail));
   };
   
   const handleUnselectAll = () => {
@@ -502,7 +518,7 @@ export default function IssueDetailsPage() {
                     onClick={handleSelectAll}
                     className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
                   >
-                    Select All ({representatives.length})
+                    Select All ({representatives.filter(rep => rep.emails && rep.emails.length > 0).length})
                   </button>
                   {selectedReps.size > 0 && (
                     <button
@@ -625,11 +641,13 @@ export default function IssueDetailsPage() {
                           // Find the original index in the full representatives array
                           const index = representatives.findIndex(r => r === rep);
                           const isSelected = selectedReps.has(index);
+                          const hasEmail = rep.emails && rep.emails.length > 0;
                           
                           return (
                             <div 
                               key={index} 
                               className={`p-2 border rounded-md ${
+                                !hasEmail ? 'opacity-60 bg-gray-50' :
                                 isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
                               }`}
                             >
@@ -639,7 +657,8 @@ export default function IssueDetailsPage() {
                                   id={`rep-${index}`}
                                   checked={isSelected}
                                   onChange={() => toggleRepresentative(index)}
-                                  className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
+                                  disabled={!hasEmail}
+                                  className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-start">
@@ -655,6 +674,7 @@ export default function IssueDetailsPage() {
                                     )}
                                   </div>
                                   <p className="text-xs text-gray-500">{rep.office}</p>
+                                  {!hasEmail && <p className="text-xs text-red-500 mt-1">No email available</p>}
                                 </div>
                               </div>
                             </div>
