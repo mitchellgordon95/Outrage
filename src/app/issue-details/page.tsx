@@ -366,12 +366,30 @@ export default function IssueDetailsPage() {
       console.log('Original demands:', demands);
       console.log('Valid demands after filtering:', validDemands);
       
+      // Check if we need to retain existing AI selection data from localStorage
+      const existingDraftData = localStorage.getItem('draftData');
+      const existingSelectionSummary = selectionSummary;
+      const existingSelectionExplanations = selectionExplanations;
+      
+      // Parse existing data if available
+      let existingData = {};
+      if (existingDraftData) {
+        try {
+          existingData = JSON.parse(existingDraftData);
+        } catch (e) {
+          console.log('Could not parse existing draft data');
+        }
+      }
+      
       // Prepare data for draft generation
       const draftData = {
         demands: validDemands,
         personalInfo: personalInfo.trim(),
         representatives: representatives.filter((_, index) => selectedReps.has(index)),
-        selectedReps: Array.from(selectedReps)
+        selectedReps: Array.from(selectedReps),
+        // Use current AI selection data or fall back to previously stored data
+        selectionSummary: existingSelectionSummary || existingData.selectionSummary,
+        selectionExplanations: existingSelectionExplanations || existingData.selectionExplanations
       };
       
       console.log('Draft data being saved:', draftData);

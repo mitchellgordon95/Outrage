@@ -39,6 +39,9 @@ export default function DraftPreviewPage() {
         personalInfo: storedPersonalInfo,
         name: storedName,
         representatives: reps,
+        selectionSummary: storedSelectionSummary,
+        selectionExplanations: storedSelectionExplanations,
+        selectedReps: storedSelectedReps,
       } = parsedData;
       
       console.log('Demands from localStorage:', storedDemands);
@@ -92,6 +95,18 @@ export default function DraftPreviewPage() {
         reps.forEach((rep, index) => {
           generateDraftForRepresentativeWithDemands(rep, index, validDemands);
         });
+        
+        // Preserve the original selectionSummary and selectionExplanations in localStorage
+        // This ensures they're still available when returning to the issue details page
+        const updatedDraftData = {
+          demands: validDemands,
+          personalInfo: storedPersonalInfo,
+          representatives: reps,
+          selectedReps: storedSelectedReps,
+          selectionSummary: storedSelectionSummary,
+          selectionExplanations: storedSelectionExplanations
+        };
+        localStorage.setItem('draftData', JSON.stringify(updatedDraftData));
       }, 0);
     } catch (error) {
       console.error('Error parsing draft data:', error);
