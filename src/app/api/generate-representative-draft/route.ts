@@ -90,7 +90,8 @@ async function generateDraft(body: RequestBody): Promise<DraftResponse | null> {
       office: recipient.office,
       contactsCount: recipient.contacts?.length || 0
     },
-    demandsCount: demands.length
+    demandsCount: demands.length,
+    personalInfo: personalInfo || '(none provided)'
   });
   
   const response = await anthropic.messages.create({

@@ -66,6 +66,7 @@ export default function DraftPreviewPage() {
       // Set all state first
       setDemands(validDemands); // Set only valid demands
       setPersonalInfo(storedPersonalInfo);
+      console.log('Setting personal info from localStorage:', storedPersonalInfo);
       setRepresentatives(reps);
       
       // Initialize drafts with loading state
@@ -93,7 +94,7 @@ export default function DraftPreviewPage() {
         
         // Generate drafts for each representative in parallel
         reps.forEach((rep, index) => {
-          generateDraftForRepresentativeWithDemands(rep, index, validDemands);
+          generateDraftForRepresentativeWithDemands(rep, index, validDemands, storedPersonalInfo);
         });
         
         // Preserve the original selectionSummary and selectionExplanations in localStorage
@@ -114,11 +115,12 @@ export default function DraftPreviewPage() {
     }
   }, [router]);
 
-  // New function that takes demands as a parameter to avoid state race conditions
+  // New function that takes demands and personalInfo as parameters to avoid state race conditions
   const generateDraftForRepresentativeWithDemands = async (
     representative: Representative, 
     index: number,
-    demandsList: string[]
+    demandsList: string[],
+    personalInfoData: string
   ) => {
     try {
       console.log(`Generating draft for ${representative.name} (index: ${index})`);
@@ -130,16 +132,22 @@ export default function DraftPreviewPage() {
         throw new Error('No valid demands to include in the draft');
       }
       
+      console.log('Sending personal info to API:', personalInfoData);
+      
+      const requestBody = {
+        demands: demandsList,
+        personalInfo: personalInfoData, // Use the personal info passed as parameter
+        recipient: representative
+      };
+      
+      console.log('Full request body:', JSON.stringify(requestBody));
+      
       const response = await fetch('/api/generate-representative-draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          demands: demandsList,
-          personalInfo,
-          recipient: representative
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       if (!response.ok) {
