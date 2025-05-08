@@ -275,7 +275,13 @@ export default function IssueDetailsPage() {
     setIsAiSelecting(true);
     
     try {
-      // Call the AI selection API
+      // Filter out representatives without contacts
+      const contactableReps = representatives.filter(rep => rep.contacts && rep.contacts.length > 0);
+      
+      // Create a mapping from filtered index to original index
+      const indexMap = contactableReps.map(rep => representatives.findIndex(r => r === rep));
+      
+      // Call the AI selection API - only send representatives that have contacts
       const response = await fetch('/api/select-representatives', {
         method: 'POST',
         headers: {
@@ -283,7 +289,7 @@ export default function IssueDetailsPage() {
         },
         body: JSON.stringify({
           demands: validDemands,
-          representatives: representatives
+          representatives: contactableReps
         }),
       });
       
@@ -295,15 +301,26 @@ export default function IssueDetailsPage() {
       
       // Update selected representatives based on the AI's recommendations
       if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
-        setSelectedReps(new Set(data.selectedIndices));
+        // Map the filtered indices back to original indices
+        const originalIndices = data.selectedIndices.map(idx => indexMap[idx]).filter(idx => idx !== undefined);
+        setSelectedReps(new Set(originalIndices));
         
-        // Update summary and explanations
+        // Update summary and explanations - map the keys back to original indices
         if (data.summary) {
           setSelectionSummary(data.summary);
         }
         
         if (data.explanations && typeof data.explanations === 'object') {
-          setSelectionExplanations(data.explanations);
+          // Transform explanations keys to use original indices
+          const mappedExplanations: Record<string, string> = {};
+          Object.entries(data.explanations).forEach(([key, value]) => {
+            const filteredIndex = parseInt(key);
+            const originalIndex = indexMap[filteredIndex];
+            if (originalIndex !== undefined) {
+              mappedExplanations[originalIndex.toString()] = value;
+            }
+          });
+          setSelectionExplanations(mappedExplanations);
         }
       }
     } catch (error) {
@@ -488,7 +505,11 @@ export default function IssueDetailsPage() {
                 {!isLoading && representatives.length > 0 && (
                   <button
                     onClick={handlePickForMe}
-                    disabled={isAiSelecting || demands.filter(d => d.trim()).length === 0}
+                    disabled={
+                      isAiSelecting || 
+                      demands.filter(d => d.trim()).length === 0 ||
+                      representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
+                    }
                     className="px-3 py-1.5 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {isAiSelecting ? (
@@ -582,7 +603,19 @@ export default function IssueDetailsPage() {
                   <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
                     <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
                     <div className="grid gap-2">
-                      {Array.from(selectedReps).map(index => {
+                      {Array.from(selectedReps).sort((a, b) => {
+                        // Sort by contact availability
+                        const aRep = representatives[a];
+                        const bRep = representatives[b];
+                        if (!aRep || !bRep) return 0;
+                        
+                        const aHasContacts = aRep.contacts && aRep.contacts.length > 0;
+                        const bHasContacts = bRep.contacts && bRep.contacts.length > 0;
+                        
+                        if (aHasContacts && !bHasContacts) return -1; // a comes first
+                        if (!aHasContacts && bHasContacts) return 1;  // b comes first
+                        return 0; // keep original order
+                      }).map(index => {
                         const rep = representatives[index];
                         if (!rep) return null;
                         
@@ -665,10 +698,20 @@ export default function IssueDetailsPage() {
                 {/* Group and display all representatives by level */}
                 {['local', 'state', 'country'].map(level => {
                   // Filter representatives by level
-                  const levelReps = representatives.filter(rep => rep.level === level);
+                  let levelReps = representatives.filter(rep => rep.level === level);
                   
                   // Skip empty sections
                   if (levelReps.length === 0) return null;
+                  
+                  // Sort representatives: Those with contacts first, those without contacts last
+                  levelReps = [...levelReps].sort((a, b) => {
+                    const aHasContacts = a.contacts && a.contacts.length > 0;
+                    const bHasContacts = b.contacts && b.contacts.length > 0;
+                    
+                    if (aHasContacts && !bHasContacts) return -1; // a comes first
+                    if (!aHasContacts && bHasContacts) return 1;  // b comes first
+                    return 0; // keep original order for reps with the same contact status
+                  });
                   
                   // Convert level to display name
                   const levelTitle = level === 'local' ? 'Local' : level === 'state' ? 'State' : 'Federal';
