@@ -116,6 +116,9 @@ Future enhancements to consider:
    - Accept user feedback on drafts and offer rewrites
    - Allow users to select different tones (formal, assertive, personal)
    - Provide options to customize draft length and complexity
+   - Allow users to choose which contact method to use for each representative
+   - Implement caching for draft generation to improve performance
+   - Add caching for Cicero API calls to reduce API usage and improve load times
 
 6. **Fact Research Assistant**:
    - Help users research issues they care about

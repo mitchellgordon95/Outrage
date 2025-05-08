@@ -207,7 +207,7 @@ export default function DraftPreviewPage() {
     }
   };
 
-  const handleSendEmails = () => {
+  const handleSendMessages = () => {
     // Create mailto links or open web forms for each representative with a completed draft
     representatives.forEach((rep, index) => {
       const draft = drafts.get(index);
@@ -395,7 +395,7 @@ export default function DraftPreviewPage() {
           </button>
           
           <button
-            onClick={handleSendEmails}
+            onClick={handleSendMessages}
             className="py-3 px-6 bg-primary text-white rounded-md hover:bg-opacity-90"
             disabled={
               Array.from(drafts.values()).every(
@@ -403,7 +403,7 @@ export default function DraftPreviewPage() {
               )
             }
           >
-            Send Emails
+            Send Messages
           </button>
         </div>
       </div>
