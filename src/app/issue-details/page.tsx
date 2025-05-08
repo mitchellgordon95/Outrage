@@ -594,9 +594,6 @@ export default function IssueDetailsPage() {
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">{rep.office}</p>
-                                {rep.emails && rep.emails.length > 0 && (
-                                  <p className="text-xs text-gray-500 truncate">{rep.emails[0]}</p>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -658,9 +655,6 @@ export default function IssueDetailsPage() {
                                     )}
                                   </div>
                                   <p className="text-xs text-gray-500">{rep.office}</p>
-                                  {rep.emails && rep.emails.length > 0 && (
-                                    <p className="text-xs text-gray-500 truncate">{rep.emails[0]}</p>
-                                  )}
                                 </div>
                               </div>
                             </div>
