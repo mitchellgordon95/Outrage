@@ -10,6 +10,7 @@ export interface Contact {
 
 // Basic representative data structure
 export interface Representative {
+  id?: string;         // Unique identifier for the representative (from Cicero API's 'sk' field if available)
   name: string;
   office: string;
   party?: string;
@@ -23,6 +24,7 @@ export interface Representative {
 // Mock data for fallback
 const MOCK_REPRESENTATIVES: Representative[] = [
   {
+    id: 'president-biden',
     name: 'Joe Biden',
     office: 'President of the United States',
     party: 'Democratic Party',
@@ -35,6 +37,7 @@ const MOCK_REPRESENTATIVES: Representative[] = [
     level: 'country'
   },
   {
+    id: 'vice-president-harris',
     name: 'Kamala Harris',
     office: 'Vice President of the United States',
     party: 'Democratic Party',

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     
     // Generate list of representatives with their details for the prompt
     const repsWithDetails = representatives.map((rep, index) => {
-      return `${index}. ${rep.name} - ${rep.office} (${rep.level} level)`;
+      return `${index}. ${rep.name} - ${rep.office} (${rep.level} level) [ID: ${rep.id || index}]`;
     }).join('\n');
     
     // Generate list of demands for the prompt
@@ -124,11 +124,31 @@ Example format:
         (index: number) => Number.isInteger(index) && index >= 0 && index < representatives.length
       );
       
-      // Return the selected indices, summary, and explanations
+      // Map indices to representative IDs
+      const selectedIds = validIndices.map(index => {
+        const rep = representatives[index];
+        return rep.id || `index-${index}`;
+      });
+      
+      // Map explanation keys from indices to IDs
+      const idExplanations: Record<string, string> = {};
+      if (explanations) {
+        Object.entries(explanations).forEach(([indexKey, explanation]) => {
+          const index = parseInt(indexKey);
+          if (Number.isInteger(index) && index >= 0 && index < representatives.length) {
+            const rep = representatives[index];
+            const id = rep.id || `index-${index}`;
+            idExplanations[id] = explanation;
+          }
+        });
+      }
+      
+      // Return the selected indices, IDs, summary, and explanations
       return NextResponse.json({ 
-        selectedIndices: validIndices, 
+        selectedIndices: validIndices,
+        selectedIds,
         summary: summary || 'Representatives were selected based on their relevance to your demands.',
-        explanations: explanations || {}
+        explanations: idExplanations
       });
     } catch (error) {
       console.error('Error parsing AI response:', error, 'Response text:', responseText);

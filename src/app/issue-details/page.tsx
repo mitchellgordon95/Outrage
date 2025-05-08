@@ -305,22 +305,14 @@ export default function IssueDetailsPage() {
         const originalIndices = data.selectedIndices.map(idx => indexMap[idx]).filter(idx => idx !== undefined);
         setSelectedReps(new Set(originalIndices));
         
-        // Update summary and explanations - map the keys back to original indices
+        // Update summary
         if (data.summary) {
           setSelectionSummary(data.summary);
         }
         
+        // Store the explanations by representative ID
         if (data.explanations && typeof data.explanations === 'object') {
-          // Transform explanations keys to use original indices
-          const mappedExplanations: Record<string, string> = {};
-          Object.entries(data.explanations).forEach(([key, value]) => {
-            const filteredIndex = parseInt(key);
-            const originalIndex = indexMap[filteredIndex];
-            if (originalIndex !== undefined) {
-              mappedExplanations[originalIndex.toString()] = value;
-            }
-          });
-          setSelectionExplanations(mappedExplanations);
+          setSelectionExplanations(data.explanations);
         }
       }
     } catch (error) {
@@ -590,6 +582,14 @@ export default function IssueDetailsPage() {
               )}
             </div>
             
+            {/* Selection Summary - Now placed at the top */}
+            {!isLoading && selectionSummary && !apiError && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <h3 className="text-lg font-semibold text-blue-800 mb-2">AI Selection Summary</h3>
+                <p className="text-blue-700 mb-3">{selectionSummary}</p>
+              </div>
+            )}
+            
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="mb-4 h-2 bg-gray-200 rounded">
@@ -698,6 +698,23 @@ export default function IssueDetailsPage() {
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">{rep.office}</p>
+                                
+                                {/* Display tooltip with AI explanation if available */}
+                                {selectionExplanations && rep.id && selectionExplanations[rep.id] && (
+                                  <div className="mt-1 group relative">
+                                    <div className="flex items-center">
+                                      <span className="text-xs py-0.5 px-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-full inline-flex items-center cursor-help">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Why selected
+                                      </span>
+                                    </div>
+                                    <div className="absolute z-10 left-0 transform translate-y-1 w-64 px-3 py-2 bg-white rounded shadow-lg invisible group-hover:visible border border-blue-100">
+                                      <p className="text-xs text-blue-700">{selectionExplanations[rep.id]}</p>
+                                    </div>
+                                  </div>
+                                )}
                                 
                                 {/* Display contact methods */}
                                 {rep.contacts && rep.contacts.length > 0 && (
@@ -850,30 +867,6 @@ export default function IssueDetailsPage() {
                 {representatives.length === 0 && !apiError && (
                   <div className="text-center py-4 text-gray-500">
                     No representatives found for your address.
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Selection Summary */}
-            {!isLoading && selectionSummary && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">AI Selection Summary</h3>
-                <p className="text-blue-700 mb-3">{selectionSummary}</p>
-                
-                {Object.keys(selectionExplanations).length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="font-medium text-blue-800 mb-1">Why these representatives were selected:</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-blue-700">
-                      {Object.entries(selectionExplanations).map(([index, explanation]) => {
-                        const rep = representatives[parseInt(index)];
-                        return rep ? (
-                          <li key={index} className="text-sm">
-                            <span className="font-semibold">{rep.name}</span>: {explanation}
-                          </li>
-                        ) : null;
-                      })}
-                    </ul>
                   </div>
                 )}
               </div>

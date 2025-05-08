@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
         }
         
         representatives.push({
+          id: official.sk || `${official.first_name}-${official.last_name}-${officeTitle}`.replace(/\s+/g, '-').toLowerCase(),
           name,
           office: officeTitle,
           party: official.party,
