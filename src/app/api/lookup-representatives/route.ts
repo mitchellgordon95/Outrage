@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key missing' }, { status: 500 });
     }
     
-    // Call Cicero API
-    const url = `https://app.cicerodata.com/v3.1/official?search_loc=${encodeURIComponent(address)}&format=json&key=${apiKey}`;
+    // Call Cicero API with max parameter to get up to 200 officials
+    const url = `https://app.cicerodata.com/v3.1/official?search_loc=${encodeURIComponent(address)}&format=json&max=200&key=${apiKey}`;
     
     // Log a simple message about the API call
     console.log(`Looking up representatives for address: ${address.substring(0, 30)}...`);
