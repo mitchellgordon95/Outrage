@@ -414,28 +414,52 @@ export default function IssueDetailsPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                {representatives.map((rep, index) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-md hover:border-gray-300">
-                    <div className="flex items-start">
-                      <input
-                        type="checkbox"
-                        id={`rep-${index}`}
-                        checked={selectedReps.has(index)}
-                        onChange={() => toggleRepresentative(index)}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <h3 className="font-medium">{rep.name}</h3>
-                        <p className="text-sm text-gray-600">{rep.office}</p>
-                        {rep.party && <p className="text-sm text-gray-600">{rep.party}</p>}
-                        {rep.emails && rep.emails.length > 0 && (
-                          <p className="text-sm break-words">{rep.emails[0]}</p>
-                        )}
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                {/* Group and display representatives by level - Local first */}
+                {['local', 'state', 'country'].map(level => {
+                  // Filter representatives by level
+                  const levelReps = representatives.filter(rep => rep.level === level);
+                  
+                  // Skip empty sections
+                  if (levelReps.length === 0) return null;
+                  
+                  // Convert level to display name
+                  const levelTitle = level === 'local' ? 'Local' : level === 'state' ? 'State' : 'Federal';
+                  
+                  return (
+                    <div key={level} className="mb-6">
+                      <h3 className="text-lg font-semibold mb-3 border-b pb-2">{levelTitle} Representatives</h3>
+                      <div className="space-y-3">
+                        {levelReps.map((rep, repIndex) => {
+                          // Find the original index in the full representatives array
+                          const index = representatives.findIndex(r => r === rep);
+                          
+                          return (
+                            <div key={index} className="p-4 border border-gray-200 rounded-md hover:border-gray-300">
+                              <div className="flex items-start">
+                                <input
+                                  type="checkbox"
+                                  id={`rep-${index}`}
+                                  checked={selectedReps.has(index)}
+                                  onChange={() => toggleRepresentative(index)}
+                                  className="mt-1 mr-3"
+                                />
+                                <div>
+                                  <h3 className="font-medium">{rep.name}</h3>
+                                  <p className="text-sm text-gray-600">{rep.office}</p>
+                                  {rep.party && <p className="text-sm text-gray-600">{rep.party}</p>}
+                                  {rep.emails && rep.emails.length > 0 && (
+                                    <p className="text-sm break-words">{rep.emails[0]}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {representatives.length === 0 && !apiError && (
                   <div className="text-center py-4 text-gray-500">
