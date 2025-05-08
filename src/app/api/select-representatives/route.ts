@@ -60,51 +60,78 @@ Based on these demands, which representatives should I contact?
 Consider each representative's jurisdiction, level of government, and ability to influence these issues.
 Please select ONLY the representatives who are most relevant to my demands.
 
-Respond with JUST a JSON array of the indices of the representatives I should contact.
-Example format: [0, 2, 5]`;
+Respond with a JSON object that contains:
+1. An array of indices of the representatives I should contact
+2. A brief summary explaining why these representatives were selected
+3. For each selected representative, a brief explanation of why they are relevant to my demands
+
+Example format:
+{
+  "selectedIndices": [0, 2, 5],
+  "summary": "A brief explanation of why these representatives were selected collectively",
+  "explanations": {
+    "0": "Why representative 0 is relevant to your demands",
+    "2": "Why representative 2 is relevant to your demands",
+    "5": "Why representative 5 is relevant to your demands"
+  }
+}`;
 
     // Call Anthropic API
     console.log('Calling Anthropic API for representative selection');
     const response = await anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
-      max_tokens: 1000,
-      system: "You are an assistant that helps users determine which elected representatives they should contact about specific issues. Return ONLY a JSON array of indices, nothing else.",
+      max_tokens: 1500,
+      system: "You are an assistant that helps users determine which elected representatives they should contact about specific issues. Return a JSON object with the selected representatives, a summary of why they were chosen, and individual explanations for each representative. Format your response as valid, parseable JSON.",
       messages: [
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.1, // Low temperature for more deterministic results
+      temperature: 0.2, // Low temperature for more deterministic results
     });
     
-    // Parse the response to extract the array of indices
+    // Parse the response to extract the JSON object
     const responseText = response.content[0].text;
     
-    // Use regex to extract array from the response
-    const arrayMatch = responseText.match(/\[[\d,\s]+\]/);
+    // Extract JSON object from the response text
+    let jsonStr = responseText;
     
-    if (!arrayMatch) {
-      console.error('Failed to parse array from AI response:', responseText);
-      return NextResponse.json(
-        { error: 'Failed to parse AI response', selectedIndices: [] },
-        { status: 500 }
-      );
+    // If the response has additional text, try to extract just the JSON part
+    if (!responseText.trim().startsWith('{')) {
+      const match = responseText.match(/\{[\s\S]*\}/);
+      if (!match) {
+        console.error('Failed to find JSON object in AI response:', responseText);
+        return NextResponse.json(
+          { error: 'Failed to parse AI response', selectedIndices: [] },
+          { status: 500 }
+        );
+      }
+      jsonStr = match[0];
     }
     
-    // Parse the array JSON and validate it
+    // Parse the JSON and validate it
     try {
-      const selectedIndices = JSON.parse(arrayMatch[0]);
+      const responseObject = JSON.parse(jsonStr);
+      const { selectedIndices, summary, explanations } = responseObject;
+      
+      if (!selectedIndices || !Array.isArray(selectedIndices)) {
+        throw new Error('Missing or invalid selectedIndices in response');
+      }
       
       // Validate that all indices are within range
       const validIndices = selectedIndices.filter(
         (index: number) => Number.isInteger(index) && index >= 0 && index < representatives.length
       );
       
-      // Return the selected indices
-      return NextResponse.json({ selectedIndices: validIndices });
+      // Return the selected indices, summary, and explanations
+      return NextResponse.json({ 
+        selectedIndices: validIndices, 
+        summary: summary || 'Representatives were selected based on their relevance to your demands.',
+        explanations: explanations || {}
+      });
     } catch (error) {
-      console.error('Error parsing AI response:', error);
+      console.error('Error parsing AI response:', error, 'Response text:', responseText);
       return NextResponse.json(
         { error: 'Failed to parse selected representatives', selectedIndices: [] },
         { status: 500 }

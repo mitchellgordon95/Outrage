@@ -19,6 +19,8 @@ export default function IssueDetailsPage() {
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [newAddress, setNewAddress] = useState('');
   const [isAiSelecting, setIsAiSelecting] = useState(false); // For "Pick for Me" feature
+  const [selectionSummary, setSelectionSummary] = useState<string | null>(null); // Summary of AI selection
+  const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
   const addressInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -219,6 +221,10 @@ export default function IssueDetailsPage() {
       return;
     }
     
+    // Reset previous summary and explanations
+    setSelectionSummary(null);
+    setSelectionExplanations({});
+    
     // Set loading state
     setIsAiSelecting(true);
     
@@ -244,6 +250,15 @@ export default function IssueDetailsPage() {
       // Update selected representatives based on the AI's recommendations
       if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
         setSelectedReps(new Set(data.selectedIndices));
+        
+        // Update summary and explanations
+        if (data.summary) {
+          setSelectionSummary(data.summary);
+        }
+        
+        if (data.explanations && typeof data.explanations === 'object') {
+          setSelectionExplanations(data.explanations);
+        }
       }
     } catch (error) {
       console.error('Error during AI selection:', error);
@@ -536,6 +551,30 @@ export default function IssueDetailsPage() {
                 {representatives.length === 0 && !apiError && (
                   <div className="text-center py-4 text-gray-500">
                     No representatives found for your address.
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Selection Summary */}
+            {!isLoading && selectionSummary && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <h3 className="text-lg font-semibold text-blue-800 mb-2">AI Selection Summary</h3>
+                <p className="text-blue-700 mb-3">{selectionSummary}</p>
+                
+                {Object.keys(selectionExplanations).length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="font-medium text-blue-800 mb-1">Why these representatives were selected:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-blue-700">
+                      {Object.entries(selectionExplanations).map(([index, explanation]) => {
+                        const rep = representatives[parseInt(index)];
+                        return rep ? (
+                          <li key={index} className="text-sm">
+                            <span className="font-semibold">{rep.name}</span>: {explanation}
+                          </li>
+                        ) : null;
+                      })}
+                    </ul>
                   </div>
                 )}
               </div>
