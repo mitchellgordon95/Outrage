@@ -582,11 +582,10 @@ export default function IssueDetailsPage() {
               )}
             </div>
             
-            {/* Selection Summary - Now placed at the top */}
+            {/* Selection Summary - Compact version at the top */}
             {!isLoading && selectionSummary && !apiError && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">AI Selection Summary</h3>
-                <p className="text-blue-700 mb-3">{selectionSummary}</p>
+              <div className="mb-3 py-2 px-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-700">{selectionSummary}</p>
               </div>
             )}
             
