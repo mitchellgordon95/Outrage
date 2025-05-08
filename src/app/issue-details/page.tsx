@@ -41,7 +41,9 @@ export default function IssueDetailsPage() {
         const {
           demands: storedDemands,
           personalInfo: storedPersonalInfo,
-          selectedReps: storedSelectedReps
+          selectedReps: storedSelectedReps,
+          selectionSummary: storedSummary,
+          selectionExplanations: storedExplanations
         } = JSON.parse(storedDraftData);
         
         // Restore demands and personal info
@@ -51,6 +53,15 @@ export default function IssueDetailsPage() {
         
         if (storedPersonalInfo) {
           setPersonalInfo(storedPersonalInfo);
+        }
+        
+        // Restore AI selection info if available
+        if (storedSummary) {
+          setSelectionSummary(storedSummary);
+        }
+        
+        if (storedExplanations && typeof storedExplanations === 'object') {
+          setSelectionExplanations(storedExplanations);
         }
         
         // We'll restore selected reps after fetching representatives
@@ -76,10 +87,12 @@ export default function IssueDetailsPage() {
     const draftData = {
       demands,
       personalInfo,
-      selectedReps: Array.from(selectedReps)
+      selectedReps: Array.from(selectedReps),
+      selectionSummary,
+      selectionExplanations
     };
     localStorage.setItem('draftData', JSON.stringify(draftData));
-  }, [demands, personalInfo, selectedReps, address]);
+  }, [demands, personalInfo, selectedReps, address, selectionSummary, selectionExplanations]);
 
   // Set up Google Maps autocomplete when editing address
   useEffect(() => {
@@ -514,7 +527,42 @@ export default function IssueDetailsPage() {
               </div>
             ) : (
               <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
-                {/* Group and display representatives by level - Local first */}
+                {/* Selected Representatives Section */}
+                {selectedReps.size > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3 border-b pb-2 text-primary">Selected Representatives</h3>
+                    <div className="space-y-3">
+                      {Array.from(selectedReps).map(index => {
+                        const rep = representatives[index];
+                        if (!rep) return null;
+                        
+                        return (
+                          <div key={`selected-${index}`} className="p-4 border border-primary border-2 rounded-md bg-blue-50">
+                            <div className="flex items-start">
+                              <input
+                                type="checkbox"
+                                id={`selected-rep-${index}`}
+                                checked={true}
+                                onChange={() => toggleRepresentative(index)}
+                                className="mt-1 mr-3"
+                              />
+                              <div>
+                                <h3 className="font-medium">{rep.name}</h3>
+                                <p className="text-sm text-gray-600">{rep.office}</p>
+                                {rep.party && <p className="text-sm text-gray-600">{rep.party}</p>}
+                                {rep.emails && rep.emails.length > 0 && (
+                                  <p className="text-sm break-words">{rep.emails[0]}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Group and display all representatives by level */}
                 {['local', 'state', 'country'].map(level => {
                   // Filter representatives by level
                   const levelReps = representatives.filter(rep => rep.level === level);
