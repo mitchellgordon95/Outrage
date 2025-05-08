@@ -177,22 +177,17 @@ export default function IssueDetailsPage() {
       setRepresentatives(reps);
       
       // If we have previously selected representatives, use those
-      // Otherwise select all representatives by default
+      // Otherwise start with no selection for new addresses
       if (initialSelectedReps && initialSelectedReps.size > 0) {
         // Filter out any invalid indexes
         const validSelectedReps = new Set(
           [...initialSelectedReps].filter(index => index < reps.length)
         );
         
-        // If all previously selected reps are invalid, select all by default
-        if (validSelectedReps.size === 0) {
-          setSelectedReps(new Set(reps.map((_, index) => index)));
-        } else {
-          setSelectedReps(validSelectedReps);
-        }
+        setSelectedReps(validSelectedReps);
       } else {
-        // Select all representatives by default
-        setSelectedReps(new Set(reps.map((_, index) => index)));
+        // Start with no selected representatives for new addresses
+        setSelectedReps(new Set());
       }
     } catch (error) {
       if (progressInterval) {
@@ -235,6 +230,16 @@ export default function IssueDetailsPage() {
       newSelected.add(index);
     }
     setSelectedReps(newSelected);
+  };
+  
+  const handleSelectAll = () => {
+    // Select all representatives
+    setSelectedReps(new Set(representatives.map((_, index) => index)));
+  };
+  
+  const handleUnselectAll = () => {
+    // Unselect all representatives
+    setSelectedReps(new Set());
   };
   
   // Handler for the "Pick for Me" feature
@@ -457,33 +462,62 @@ export default function IssueDetailsPage() {
           
           {/* Right column: Representatives */}
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Your Representatives</h2>
+            <div className="flex flex-col space-y-2 mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Your Representatives</h2>
+                </div>
+                
+                {/* Pick for Me button */}
+                {!isLoading && representatives.length > 0 && (
+                  <button
+                    onClick={handlePickForMe}
+                    disabled={isAiSelecting || demands.filter(d => d.trim()).length === 0}
+                    className="px-3 py-1.5 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {isAiSelecting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Selecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span>Pick for Me</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
               
-              {/* Pick for Me button */}
+              {/* Selection controls */}
               {!isLoading && representatives.length > 0 && (
-                <button
-                  onClick={handlePickForMe}
-                  disabled={isAiSelecting || demands.filter(d => d.trim()).length === 0}
-                  className="px-3 py-1.5 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  {isAiSelecting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>Selecting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span>Pick for Me</span>
-                    </>
+                <div className="flex space-x-2 text-sm">
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
+                  >
+                    Select All ({representatives.length})
+                  </button>
+                  {selectedReps.size > 0 && (
+                    <button
+                      onClick={handleUnselectAll}
+                      className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Unselect All
+                    </button>
                   )}
-                </button>
+                  {selectedReps.size > 0 && (
+                    <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
+                      {selectedReps.size} selected
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             
@@ -654,7 +688,7 @@ export default function IssueDetailsPage() {
             }
             className="w-full py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isDraftLoading ? 'Generating Draft...' : 'Preview Draft'}
+            {isDraftLoading ? 'Generating Draft...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Preview Draft'}
           </button>
         </div>
       </div>
