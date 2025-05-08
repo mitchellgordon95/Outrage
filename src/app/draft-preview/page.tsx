@@ -196,9 +196,6 @@ export default function DraftPreviewPage() {
         window.open(mailtoLink, '_blank');
       }
     });
-    
-    // Navigate to campaign creation page
-    // router.push('/campaign');
   };
 
   const getSelectedDraft = () => {
