@@ -20,10 +20,8 @@ export async function POST(request: NextRequest) {
     // Call Cicero API
     const url = `https://app.cicerodata.com/v3.1/official?search_loc=${encodeURIComponent(address)}&format=json&key=${apiKey}`;
     
-    // Log the URL (with API key partially masked for security)
-    const logUrl = url.replace(apiKey, apiKey.substring(0, 3) + '...' + apiKey.substring(apiKey.length - 3));
-    console.log('Calling Cicero API:', logUrl);
-    console.log('Address being looked up:', address);
+    // Log a simple message about the API call
+    console.log(`Looking up representatives for address: ${address.substring(0, 30)}...`);
     
     const response = await fetch(url);
     
@@ -37,43 +35,30 @@ export async function POST(request: NextRequest) {
     // Parse the response
     const data = await response.json();
     
-    // Just log the top-level keys
-    console.log('Response top-level keys:', Object.keys(data));
-    if (data.response) {
-      console.log('Response.results keys:', Object.keys(data.response.results || {}));
-    }
+    // Log a simple message about the response
+    const candidateCount = data.response?.results?.candidates?.length || 0;
+    console.log(`Found ${candidateCount} location candidates in response`);
     
     // Initialize empty officials array
     let officials = [];
     
     // Check for location candidates (each candidate has its own officials)
     if (data.response?.results?.candidates && data.response.results.candidates.length > 0) {
-      console.log(`Found ${data.response.results.candidates.length} location candidates`);
-      
       // Use the first candidate's officials
       const firstCandidate = data.response.results.candidates[0];
       
-      // Log the matched address for debugging
-      if (firstCandidate.match_addr) {
-        console.log('Matched address:', firstCandidate.match_addr);
-      }
-      
       if (firstCandidate.officials && Array.isArray(firstCandidate.officials)) {
         officials = firstCandidate.officials;
-        console.log(`Found ${officials.length} officials for the first candidate`);
-        
-        // Log the keys of the first official if available
-        if (officials.length > 0) {
-          console.log('FIRST OFFICIAL KEYS:', Object.keys(officials[0]));
-        }
+        console.log(`Found ${officials.length} officials for address`);
       } else {
-        console.log('No officials found for the first candidate');
+        console.log('No officials found for the matched address');
       }
     } else if (data.response?.results?.officials) {
       // Direct officials array (unlikely based on your results)
       officials = data.response.results.officials;
+      console.log(`Found ${officials.length} officials for address`);
     } else {
-      console.log('No officials or candidates found in the response');
+      console.log('No officials found for the provided address');
       return NextResponse.json({ representatives: [] });
     }
     
@@ -112,10 +97,7 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Log the office structure of the first official
-        if (officials.indexOf(official) === 0) {
-          console.log('Office structure:', JSON.stringify(official.office, null, 2));
-        }
+        // No more detailed logging needed
         
         // Get the office title using the correct properties from the API
         let officeTitle = official.office?.title || 
