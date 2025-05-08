@@ -31,8 +31,10 @@ The project uses environment variables for API keys and configuration:
 
 ```
 # .env file structure
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-GOOGLE_CIVIC_API_KEY=your_google_civic_api_key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+CICERO_API_KEY=your_cicero_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 ```
 
 **Important**: The `.env` file is included in `.gitignore` to prevent exposing API keys in the repository.
@@ -60,19 +62,27 @@ GOOGLE_CIVIC_API_KEY=your_google_civic_api_key
 
 ### Representative Lookup Implementation
 
-Currently using a CSV file provided by the Governance Project at techandciviclife.org for elected officials data.
+Implementing Cicero API for representative lookup based on comprehensive evaluation of available options:
 
-- **Implementation**: Data is loaded from a CSV file with representative information
-- **Future Consideration**: May use Google Civic Information API as an alternative or enhancement
+- **Chosen Solution**: Cicero API
+  - Robust and comprehensive coverage of elected officials at all levels of government
+  - Address-based lookup capability (not limited to lat/long coordinates)
+  - Reliable and well-maintained API with good documentation
+  - No restrictive daily API limits that would impact scaling
 
-Alternative/backup approaches:
+Alternatives considered:
 - **Google Civic Information API**: 
-  - Free service (up to 25,000 queries per day)
-  - Returns election information and officials at various government levels
-  - Provides polling locations, ballot information, and election administration details
-  - Organizes information based on political geography of an address
-- **OpenStates API**: Provides state-level representatives via the `/people.geo` endpoint
-- Custom scraping solution from government websites (more maintenance, less reliable)
+  - As of April 2025, the representatives endpoint was discontinued
+  - Only provides election information now
+- **Plural's Open States API**: 
+  - Limited to state-level representatives
+  - Restricted by daily API limits
+  - Only supports lookup by lat/long coordinates
+  - Less comprehensive than Cicero
+- **Center for Tech and Civic Life's Governance Project**:
+  - Provides only a static CSV file that must be requested via email
+  - Lacks real-time updates and API integration
+  - Unresponsive to data requests
 
 ## Stretch Goals
 
@@ -87,6 +97,9 @@ Future enhancements to consider:
    - Pull tweets from representatives' Twitter/X profiles
    - Show what representatives are tweeting about relevant issues
    - Allow users to engage with representatives' social content
+   - Generate shareable social media posts directed at representatives
+   - Create pre-filled X/Twitter, Instagram, or Facebook posts with tags to officials
+   - Track social media engagement metrics for campaigns
 
 3. **Election Year Features**:
    - Identify and contact candidates running for office (not just incumbents)
