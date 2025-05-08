@@ -142,13 +142,35 @@ export async function POST(request: NextRequest) {
           officeTitle = `${officeTitle} of ${state}`;
         }
         
+        // Build contacts array from email addresses and web form URL
+        const contacts = [];
+        
+        // Add email contacts
+        if (official.email_addresses && official.email_addresses.length > 0) {
+          for (const email of official.email_addresses) {
+            contacts.push({
+              type: 'email',
+              value: email
+            });
+          }
+        }
+        
+        // Add web form contact if available
+        if (official.web_form_url) {
+          contacts.push({
+            type: 'webform',
+            value: official.web_form_url,
+            description: 'Web Form'
+          });
+        }
+        
         representatives.push({
           name,
           office: officeTitle,
           party: official.party,
           photoUrl: official.photo_origin_url,
           phones,
-          emails: official.email_addresses || [],
+          contacts,
           urls: official.urls || [],
           level
         });

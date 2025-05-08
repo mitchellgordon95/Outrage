@@ -1,3 +1,13 @@
+// Contact type definition
+export type ContactType = 'email' | 'webform' | 'facebook' | 'twitter' | 'instagram';
+
+// Contact data structure
+export interface Contact {
+  type: ContactType;
+  value: string;
+  description?: string;
+}
+
 // Basic representative data structure
 export interface Representative {
   name: string;
@@ -5,7 +15,7 @@ export interface Representative {
   party?: string;
   photoUrl?: string;
   phones?: string[];
-  emails?: string[];
+  contacts: Contact[];
   urls?: string[];
   level: 'country' | 'state' | 'local';
 }
@@ -16,7 +26,10 @@ const MOCK_REPRESENTATIVES: Representative[] = [
     name: 'Joe Biden',
     office: 'President of the United States',
     party: 'Democratic Party',
-    emails: ['president@whitehouse.gov'],
+    contacts: [
+      { type: 'email', value: 'president@whitehouse.gov' },
+      { type: 'webform', value: 'https://www.whitehouse.gov/contact/' }
+    ],
     phones: ['(202) 456-1111'],
     urls: ['https://www.whitehouse.gov/contact/'],
     level: 'country'
@@ -25,7 +38,9 @@ const MOCK_REPRESENTATIVES: Representative[] = [
     name: 'Kamala Harris',
     office: 'Vice President of the United States',
     party: 'Democratic Party',
-    emails: ['vice.president@whitehouse.gov'],
+    contacts: [
+      { type: 'email', value: 'vice.president@whitehouse.gov' }
+    ],
     phones: ['(202) 456-1111'],
     urls: ['https://www.whitehouse.gov/contact/'],
     level: 'country'

@@ -185,15 +185,25 @@ export default function DraftPreviewPage() {
   };
 
   const handleSendEmails = () => {
-    // Create mailto links for each representative with a completed draft
+    // Create mailto links or open web forms for each representative with a completed draft
     representatives.forEach((rep, index) => {
       const draft = drafts.get(index);
-      if (draft?.status === 'complete' && rep.emails && rep.emails.length > 0) {
-        const email = rep.emails[0];
-        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
+      if (draft?.status === 'complete' && rep.contacts && rep.contacts.length > 0) {
+        // Look for email contact first
+        const emailContact = rep.contacts.find(contact => contact.type === 'email');
+        const webformContact = rep.contacts.find(contact => contact.type === 'webform');
         
-        // Open in a new tab
-        window.open(mailtoLink, '_blank');
+        // Prioritize email over webform
+        if (emailContact) {
+          const mailtoLink = `mailto:${emailContact.value}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
+          window.open(mailtoLink, '_blank');
+        } else if (webformContact) {
+          // For webforms, we can only open the URL and the user will need to copy-paste
+          window.open(webformContact.value, '_blank');
+          
+          // Optionally, we could add code here to show a modal with copy buttons for the subject and content
+          // For simplicity, we're just opening the web form for now
+        }
       }
     });
   };
@@ -246,7 +256,20 @@ export default function DraftPreviewPage() {
                       isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                     }`}
                   >
-                    <div className="font-medium truncate">{rep.name}</div>
+                    <div className="flex-1">
+                      <div className="font-medium truncate">{rep.name}</div>
+                      {rep.contacts && rep.contacts.length > 0 && (
+                        <div className="flex items-center mt-1 text-xs text-gray-500">
+                          {rep.contacts.map((contact, i) => (
+                            <span key={i} className="mr-2">
+                              {contact.type === 'email' ? '✉️' : 
+                               contact.type === 'webform' ? '🌐' : 
+                               '📞'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center">
                       {draft?.status === 'loading' && (
                         <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin ml-2"></div>

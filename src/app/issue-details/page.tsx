@@ -227,12 +227,12 @@ export default function IssueDetailsPage() {
   };
 
   const toggleRepresentative = (index: number) => {
-    // Check if the representative has an email
+    // Check if the representative has any contact methods
     const rep = representatives[index];
-    const hasEmail = rep?.emails && rep.emails.length > 0;
+    const hasContacts = rep?.contacts && rep.contacts.length > 0;
     
-    // Only allow toggling if the representative has an email
-    if (hasEmail) {
+    // Only allow toggling if the representative has at least one contact method
+    if (hasContacts) {
       const newSelected = new Set(selectedReps);
       if (newSelected.has(index)) {
         newSelected.delete(index);
@@ -244,13 +244,13 @@ export default function IssueDetailsPage() {
   };
   
   const handleSelectAll = () => {
-    // Select all representatives that have email addresses
-    const representativesWithEmail = representatives
+    // Select all representatives that have contact methods
+    const representativesWithContacts = representatives
       .map((rep, index) => ({ rep, index }))
-      .filter(item => item.rep.emails && item.rep.emails.length > 0)
+      .filter(item => item.rep.contacts && item.rep.contacts.length > 0)
       .map(item => item.index);
     
-    setSelectedReps(new Set(representativesWithEmail));
+    setSelectedReps(new Set(representativesWithContacts));
   };
   
   const handleUnselectAll = () => {
@@ -518,7 +518,7 @@ export default function IssueDetailsPage() {
                     onClick={handleSelectAll}
                     className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
                   >
-                    Select All ({representatives.filter(rep => rep.emails && rep.emails.length > 0).length})
+                    Select All ({representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length})
                   </button>
                   {selectedReps.size > 0 && (
                     <button
@@ -623,6 +623,26 @@ export default function IssueDetailsPage() {
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">{rep.office}</p>
+                                
+                                {/* Display contact methods */}
+                                {rep.contacts && rep.contacts.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {rep.contacts.map((contact, contactIndex) => (
+                                      <span 
+                                        key={contactIndex}
+                                        className={`text-xs px-2 py-0.5 rounded-full ${
+                                          contact.type === 'email' ? 'bg-green-50 text-green-700 border border-green-200' : 
+                                          contact.type === 'webform' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                          'bg-gray-50 text-gray-700 border border-gray-200'
+                                        }`}
+                                      >
+                                        {contact.type === 'email' ? '✉️' : 
+                                         contact.type === 'webform' ? '🌐' : 
+                                         '📞'} {contact.description || contact.type}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -654,13 +674,13 @@ export default function IssueDetailsPage() {
                           // Find the original index in the full representatives array
                           const index = representatives.findIndex(r => r === rep);
                           const isSelected = selectedReps.has(index);
-                          const hasEmail = rep.emails && rep.emails.length > 0;
+                          const hasContacts = rep.contacts && rep.contacts.length > 0;
                           
                           return (
                             <div 
                               key={index} 
                               className={`p-2 border rounded-md ${
-                                !hasEmail ? 'opacity-60 bg-gray-50' :
+                                !hasContacts ? 'opacity-60 bg-gray-50' :
                                 isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
                               }`}
                             >
@@ -670,7 +690,7 @@ export default function IssueDetailsPage() {
                                   id={`rep-${index}`}
                                   checked={isSelected}
                                   onChange={() => toggleRepresentative(index)}
-                                  disabled={!hasEmail}
+                                  disabled={!hasContacts}
                                   className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
                                 />
                                 {rep.photoUrl && (
@@ -700,7 +720,28 @@ export default function IssueDetailsPage() {
                                     )}
                                   </div>
                                   <p className="text-xs text-gray-500">{rep.office}</p>
-                                  {!hasEmail && <p className="text-xs text-red-500 mt-1">No email available</p>}
+                                  
+                                  {/* Display contact methods */}
+                                  {hasContacts ? (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      {rep.contacts.map((contact, contactIndex) => (
+                                        <span 
+                                          key={contactIndex}
+                                          className={`text-xs px-2 py-0.5 rounded-full ${
+                                            contact.type === 'email' ? 'bg-green-50 text-green-700 border border-green-200' : 
+                                            contact.type === 'webform' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                            'bg-gray-50 text-gray-700 border border-gray-200'
+                                          }`}
+                                        >
+                                          {contact.type === 'email' ? '✉️' : 
+                                           contact.type === 'webform' ? '🌐' : 
+                                           '📞'} {contact.description || contact.type}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-red-500 mt-1">No contact methods available</p>
+                                  )}
                                 </div>
                               </div>
                             </div>

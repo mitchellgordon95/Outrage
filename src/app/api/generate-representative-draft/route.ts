@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
+import { Contact } from '@/services/representatives';
+
 interface RequestBody {
   demands: string[];
   personalInfo?: string;
   recipient: {
     name: string;
     office: string;
+    contacts?: Contact[];
   };
 }
 
@@ -65,11 +68,27 @@ async function generateDraft(body: RequestBody): Promise<DraftResponse | null> {
     .map((demand, index) => `${index + 1}. ${demand}`)
     .join('\n');
   
+  // Format contact information if available
+  let contactInfo = '';
+  if (recipient.contacts && recipient.contacts.length > 0) {
+    const emailContacts = recipient.contacts.filter(c => c.type === 'email').map(c => c.value);
+    const webformContacts = recipient.contacts.filter(c => c.type === 'webform').map(c => c.value);
+    
+    if (emailContacts.length > 0) {
+      contactInfo += `\nEmail: ${emailContacts.join(', ')}`;
+    }
+    
+    if (webformContacts.length > 0) {
+      contactInfo += `\nWeb Form: ${webformContacts.join(', ')}`;
+    }
+  }
+  
   console.log('Calling Anthropic API with:', {
     model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
     recipient: {
       name: recipient.name,
-      office: recipient.office
+      office: recipient.office,
+      contactsCount: recipient.contacts?.length || 0
     },
     demandsCount: demands.length
   });
@@ -84,7 +103,7 @@ async function generateDraft(body: RequestBody): Promise<DraftResponse | null> {
         content: `Write an email to my elected representative with the following information:
 
 Representative: ${recipient.name}
-Position: ${recipient.office}
+Position: ${recipient.office}${contactInfo}
 My personal info: ${personalInfo || "I'm a constituent"}
 My demands:
 ${demandsText}
@@ -96,6 +115,7 @@ Important guidelines:
 - If personal info is provided, use it to personalize the email
 - If no personal info is provided, sign as "A Concerned Constituent"
 - Do not include fields for the user to fill in manually
+- If this is using a web form rather than email, make sure the text is still appropriate
 
 Format your response in plain text like this:
 Subject: [subject line here]
