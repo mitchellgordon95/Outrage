@@ -256,19 +256,44 @@ export default function DraftPreviewPage() {
                       isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                     }`}
                   >
-                    <div className="flex-1">
-                      <div className="font-medium truncate">{rep.name}</div>
-                      {rep.contacts && rep.contacts.length > 0 && (
-                        <div className="flex items-center mt-1 text-xs text-gray-500">
-                          {rep.contacts.map((contact, i) => (
-                            <span key={i} className="mr-2">
-                              {contact.type === 'email' ? '✉️' : 
-                               contact.type === 'webform' ? '🌐' : 
-                               '📞'}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    <div className="flex items-center">
+                      <div className="mr-2 flex-shrink-0">
+                        {rep.photoUrl ? (
+                          <img 
+                            src={rep.photoUrl} 
+                            alt={`Photo of ${rep.name}`}
+                            className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              // Replace broken images with placeholder
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.parentElement!.innerHTML = `
+                                <div class="w-6 h-6 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
+                                  ${rep.name.charAt(0)}
+                                </div>
+                              `;
+                            }}
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
+                            {rep.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium truncate">{rep.name}</div>
+                        {rep.contacts && rep.contacts.length > 0 && (
+                          <div className="flex items-center mt-1 text-xs text-gray-500">
+                            {rep.contacts.map((contact, i) => (
+                              <span key={i} className="mr-2">
+                                {contact.type === 'email' ? '✉️' : 
+                                 contact.type === 'webform' ? '🌐' : 
+                                 '📞'}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center">
                       {draft?.status === 'loading' && (

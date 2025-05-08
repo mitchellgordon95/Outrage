@@ -596,19 +596,29 @@ export default function IssueDetailsPage() {
                                 onChange={() => toggleRepresentative(index)}
                                 className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
                               />
-                              {rep.photoUrl && (
-                                <div className="mr-2 flex-shrink-0">
+                              <div className="mr-2 flex-shrink-0">
+                                {rep.photoUrl ? (
                                   <img 
                                     src={rep.photoUrl} 
                                     alt={`Photo of ${rep.name}`}
                                     className="w-8 h-8 rounded-full object-cover border border-gray-200"
                                     onError={(e) => {
-                                      // Hide broken images
-                                      (e.target as HTMLImageElement).style.display = 'none';
+                                      // Replace broken images with placeholder
+                                      const target = e.target as HTMLImageElement;
+                                      target.onerror = null; // Prevent infinite loop
+                                      target.parentElement!.innerHTML = `
+                                        <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                          ${rep.name.charAt(0)}
+                                        </div>
+                                      `;
                                     }}
                                   />
-                                </div>
-                              )}
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                    {rep.name.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start">
                                   <h3 className="font-medium text-primary truncate">{rep.name}</h3>
@@ -693,19 +703,29 @@ export default function IssueDetailsPage() {
                                   disabled={!hasContacts}
                                   className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
                                 />
-                                {rep.photoUrl && (
-                                  <div className="mr-2 flex-shrink-0">
+                                <div className="mr-2 flex-shrink-0">
+                                  {rep.photoUrl ? (
                                     <img 
                                       src={rep.photoUrl} 
                                       alt={`Photo of ${rep.name}`}
                                       className="w-8 h-8 rounded-full object-cover border border-gray-200"
                                       onError={(e) => {
-                                        // Hide broken images
-                                        (e.target as HTMLImageElement).style.display = 'none';
+                                        // Replace broken images with placeholder
+                                        const target = e.target as HTMLImageElement;
+                                        target.onerror = null; // Prevent infinite loop
+                                        target.parentElement!.innerHTML = `
+                                          <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                            ${rep.name.charAt(0)}
+                                          </div>
+                                        `;
                                       }}
                                     />
-                                  </div>
-                                )}
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                      {rep.name.charAt(0)}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-start">
                                     <h3 className="font-medium truncate">{rep.name}</h3>
