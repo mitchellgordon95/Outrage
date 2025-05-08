@@ -69,6 +69,18 @@ export default function IssueDetailsPage() {
     }
   }, [router]);
   
+  // Save state whenever any relevant state changes
+  useEffect(() => {
+    if (!address) return; // Don't save if we don't have an address yet (initial load)
+    
+    const draftData = {
+      demands,
+      personalInfo,
+      selectedReps: Array.from(selectedReps)
+    };
+    localStorage.setItem('draftData', JSON.stringify(draftData));
+  }, [demands, personalInfo, selectedReps, address]);
+
   // Set up Google Maps autocomplete when editing address
   useEffect(() => {
     if (!isEditingAddress || !addressInputRef.current) return;
