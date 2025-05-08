@@ -560,32 +560,42 @@ export default function IssueDetailsPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+              <div className="max-h-[600px] overflow-y-auto pr-2">
                 {/* Selected Representatives Section */}
                 {selectedReps.size > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3 border-b pb-2 text-primary">Selected Representatives</h3>
-                    <div className="space-y-3">
+                  <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
+                    <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
+                    <div className="grid gap-2">
                       {Array.from(selectedReps).map(index => {
                         const rep = representatives[index];
                         if (!rep) return null;
                         
                         return (
-                          <div key={`selected-${index}`} className="p-4 border border-primary border-2 rounded-md bg-blue-50">
+                          <div key={`selected-${index}`} className="p-2 bg-white border border-primary rounded-md">
                             <div className="flex items-start">
                               <input
                                 type="checkbox"
                                 id={`selected-rep-${index}`}
                                 checked={true}
                                 onChange={() => toggleRepresentative(index)}
-                                className="mt-1 mr-3"
+                                className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
                               />
-                              <div>
-                                <h3 className="font-medium">{rep.name}</h3>
-                                <p className="text-sm text-gray-600">{rep.office}</p>
-                                {rep.party && <p className="text-sm text-gray-600">{rep.party}</p>}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <h3 className="font-medium text-primary truncate">{rep.name}</h3>
+                                  {rep.party && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
+                                      rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
+                                      rep.party.toLowerCase().includes('republican') ? 'bg-red-100 text-red-800' : 
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {rep.party}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500">{rep.office}</p>
                                 {rep.emails && rep.emails.length > 0 && (
-                                  <p className="text-sm break-words">{rep.emails[0]}</p>
+                                  <p className="text-xs text-gray-500 truncate">{rep.emails[0]}</p>
                                 )}
                               </div>
                             </div>
@@ -606,31 +616,50 @@ export default function IssueDetailsPage() {
                   
                   // Convert level to display name
                   const levelTitle = level === 'local' ? 'Local' : level === 'state' ? 'State' : 'Federal';
+                  const bgColor = level === 'local' ? 'bg-indigo-50' : level === 'state' ? 'bg-emerald-50' : 'bg-amber-50';
+                  const borderColor = level === 'local' ? 'border-indigo-100' : level === 'state' ? 'border-emerald-100' : 'border-amber-100';
+                  const textColor = level === 'local' ? 'text-indigo-700' : level === 'state' ? 'text-emerald-700' : 'text-amber-700';
                   
                   return (
-                    <div key={level} className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3 border-b pb-2">{levelTitle} Representatives</h3>
-                      <div className="space-y-3">
+                    <div key={level} className={`mb-4 ${bgColor} border ${borderColor} rounded-md p-3`}>
+                      <h3 className={`text-lg font-semibold mb-2 pb-2 border-b ${borderColor} ${textColor}`}>{levelTitle} Representatives</h3>
+                      <div className="grid gap-2">
                         {levelReps.map((rep, repIndex) => {
                           // Find the original index in the full representatives array
                           const index = representatives.findIndex(r => r === rep);
+                          const isSelected = selectedReps.has(index);
                           
                           return (
-                            <div key={index} className="p-4 border border-gray-200 rounded-md hover:border-gray-300">
+                            <div 
+                              key={index} 
+                              className={`p-2 border rounded-md ${
+                                isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                              }`}
+                            >
                               <div className="flex items-start">
                                 <input
                                   type="checkbox"
                                   id={`rep-${index}`}
-                                  checked={selectedReps.has(index)}
+                                  checked={isSelected}
                                   onChange={() => toggleRepresentative(index)}
-                                  className="mt-1 mr-3"
+                                  className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
                                 />
-                                <div>
-                                  <h3 className="font-medium">{rep.name}</h3>
-                                  <p className="text-sm text-gray-600">{rep.office}</p>
-                                  {rep.party && <p className="text-sm text-gray-600">{rep.party}</p>}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start">
+                                    <h3 className="font-medium truncate">{rep.name}</h3>
+                                    {rep.party && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
+                                        rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
+                                        rep.party.toLowerCase().includes('republican') ? 'bg-red-100 text-red-800' : 
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {rep.party}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500">{rep.office}</p>
                                   {rep.emails && rep.emails.length > 0 && (
-                                    <p className="text-sm break-words">{rep.emails[0]}</p>
+                                    <p className="text-xs text-gray-500 truncate">{rep.emails[0]}</p>
                                   )}
                                 </div>
                               </div>
