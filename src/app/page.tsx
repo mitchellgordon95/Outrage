@@ -64,6 +64,9 @@ export default function Home() {
       if (place && place.formatted_address) {
         setAddress(place.formatted_address);
         
+        // We're no longer in autocomplete selection mode
+        setAutoCompleteActive(false);
+        
         // If the place has a formatted address, we can submit right away
         // This helps when user selects with mouse click
         if (inputRef.current) {
@@ -92,14 +95,44 @@ export default function Home() {
     router.push('/issue-details');
   };
 
+  // We'll define a state variable to track if we're in the middle of selecting
+  const [autoCompleteActive, setAutoCompleteActive] = useState(false);
+
+  // Update the useEffect to setup event listeners for autoComplete keyboard navigation
+  useEffect(() => {
+    // Handle autoComplete keyboard navigation
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Check if the key is arrow down/up which activates autoComplete selection mode
+      if (e.target === inputRef.current && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        setAutoCompleteActive(true);
+      }
+      
+      // If Enter is pressed and we're in autoComplete selection mode, prevent default
+      if (e.key === 'Enter' && autoCompleteActive) {
+        e.preventDefault();
+      }
+    };
+    
+    // When user clicks anywhere else, we're no longer in autoComplete selection mode
+    const handleGlobalClick = () => {
+      setAutoCompleteActive(false);
+    };
+    
+    document.addEventListener('keydown', handleGlobalKeyDown, true);
+    document.addEventListener('click', handleGlobalClick);
+    
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown, true);
+      document.removeEventListener('click', handleGlobalClick);
+    };
+  }, [autoCompleteActive]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!address) return;
     
-    // Check if there's a Google prediction active
-    // If so, let the place_changed event handle the submission
-    if (document.querySelector('.pac-container')?.matches(':visible')) {
-      // Google's autocomplete dropdown is visible, don't submit yet
+    // If we're in autoComplete selection mode, don't submit yet
+    if (autoCompleteActive) {
       return;
     }
     
@@ -108,9 +141,13 @@ export default function Home() {
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Detect when user presses Enter or ArrowDown/Up in the address field
-    if (e.key === 'Enter' && document.querySelector('.pac-container')?.matches(':visible')) {
-      // Prevent form submission if dropdown is visible
+    // When user starts typing or navigating with arrow keys, we're in autoComplete mode
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      setAutoCompleteActive(true);
+    }
+    
+    // If Enter is pressed during autoComplete, prevent form submission
+    if (e.key === 'Enter' && autoCompleteActive) {
       e.preventDefault();
     }
   };
