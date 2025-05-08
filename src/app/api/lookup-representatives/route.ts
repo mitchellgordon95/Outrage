@@ -62,6 +62,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ representatives: [] });
     }
     
+    // Filter officials to only include those currently in office
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const currentOfficials = officials.filter(official => {
+      // Check valid_from date (must be in the past or today)
+      const validFrom = official.valid_from ? 
+        new Date(official.valid_from.split(' ')[0]).toISOString().split('T')[0] : null;
+      
+      // Check valid_to date (must be in the future or null/undefined)
+      const validTo = official.valid_to && official.valid_to !== 'null' ? 
+        new Date(official.valid_to.split(' ')[0]).toISOString().split('T')[0] : null;
+      
+      // Official is current if:
+      // 1. They have started their term (valid_from is in the past or today)
+      // 2. Their term hasn't ended (valid_to is in the future or null/undefined)
+      const hasStarted = validFrom ? validFrom <= currentDate : true;
+      const hasNotEnded = validTo ? validTo > currentDate : true;
+      
+      return hasStarted && hasNotEnded;
+    });
+    
+    console.log(`Filtered to ${currentOfficials.length} currently active officials`);
+    
+    // Use the filtered officials
+    officials = currentOfficials;
+    
     // Transform officials to our format
     const representatives: Representative[] = [];
     
