@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
@@ -54,26 +55,64 @@ export default function Home() {
       fields: ['address_components', 'formatted_address', 'geometry'],
       types: ['address']
     });
+    
+    // Store the autocomplete instance in a ref for later use
+    autocompleteRef.current = autocomplete;
 
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       if (place && place.formatted_address) {
         setAddress(place.formatted_address);
+        
+        // If the place has a formatted address, we can submit right away
+        // This helps when user selects with mouse click
+        if (inputRef.current) {
+          // Focus on the input to ensure blur events fire correctly
+          inputRef.current.focus();
+          
+          // Small timeout to ensure the address state is updated
+          setTimeout(() => {
+            submitAddress(place.formatted_address);
+          }, 100);
+        }
       }
     });
+  };
+  
+  // Helper function to handle address submission
+  const submitAddress = (addressToSubmit: string) => {
+    if (!addressToSubmit) return;
+    
+    setIsLoading(true);
+    
+    // Store address in localStorage for use in the next page
+    localStorage.setItem('userAddress', addressToSubmit);
+    
+    // Navigate to the next page
+    router.push('/issue-details');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!address) return;
     
-    setIsLoading(true);
+    // Check if there's a Google prediction active
+    // If so, let the place_changed event handle the submission
+    if (document.querySelector('.pac-container')?.matches(':visible')) {
+      // Google's autocomplete dropdown is visible, don't submit yet
+      return;
+    }
     
-    // Store address in localStorage for use in the next page
-    localStorage.setItem('userAddress', address);
-    
-    // Navigate to the next page
-    router.push('/issue-details');
+    // Otherwise, submit with the current address value
+    submitAddress(address);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Detect when user presses Enter or ArrowDown/Up in the address field
+    if (e.key === 'Enter' && document.querySelector('.pac-container')?.matches(':visible')) {
+      // Prevent form submission if dropdown is visible
+      e.preventDefault();
+    }
   };
 
   return (
@@ -137,6 +176,7 @@ export default function Home() {
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
+                      onKeyDown={handleKeyDown}
                       className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                       placeholder="123 Main St, City, State"
                       required
