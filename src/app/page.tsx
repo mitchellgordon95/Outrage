@@ -75,7 +75,9 @@ export default function Home() {
           
           // Small timeout to ensure the address state is updated
           setTimeout(() => {
-            submitAddress(place.formatted_address);
+            if (place.formatted_address) {
+              submitAddress(place.formatted_address);
+            }
           }, 100);
         }
       }

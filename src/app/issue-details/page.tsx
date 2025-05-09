@@ -150,7 +150,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string, initialSelectedReps?: Set<number>) => {
+  const fetchRepresentatives = async (address: string, initialSelectedReps?: Set<unknown>) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -173,7 +173,7 @@ export default function IssueDetailsPage() {
       }
       
       // Log officials without email
-      const repsWithoutEmail = reps.filter(rep => !rep.emails || rep.emails.length === 0);
+      const repsWithoutEmail = reps.filter(rep => !rep.contacts || !rep.contacts.some(c => c.type === 'email'));
       console.log(`Representatives without email: ${repsWithoutEmail.length}/${reps.length}`);
       
       setLoadingProgress(100);
@@ -184,14 +184,20 @@ export default function IssueDetailsPage() {
       // Otherwise start with no selection for new addresses
       if (initialSelectedReps && initialSelectedReps.size > 0) {
         // Filter out any invalid indexes
-        const validSelectedReps = new Set(
-          [...initialSelectedReps].filter(index => index < reps.length)
-        );
+        const validSelectedReps = new Set<number>();
+        
+        // Convert to array and filter
+        Array.from(initialSelectedReps).forEach(item => {
+          const index = Number(item);
+          if (!isNaN(index) && index < reps.length) {
+            validSelectedReps.add(index);
+          }
+        });
         
         setSelectedReps(validSelectedReps);
       } else {
         // Start with no selected representatives for new addresses
-        setSelectedReps(new Set());
+        setSelectedReps(new Set<number>());
       }
     } catch (error) {
       if (progressInterval) {
@@ -302,8 +308,8 @@ export default function IssueDetailsPage() {
       // Update selected representatives based on the AI's recommendations
       if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
         // Map the filtered indices back to original indices
-        const originalIndices = data.selectedIndices.map(idx => indexMap[idx]).filter(idx => idx !== undefined);
-        setSelectedReps(new Set(originalIndices));
+        const originalIndices = data.selectedIndices.map((idx: number) => indexMap[idx]).filter((idx: number | undefined) => idx !== undefined);
+        setSelectedReps(new Set(originalIndices as number[]));
         
         // Update summary
         if (data.summary) {
@@ -364,7 +370,10 @@ export default function IssueDetailsPage() {
       const existingSelectionExplanations = selectionExplanations;
       
       // Parse existing data if available
-      let existingData = {};
+      let existingData: {
+        selectionSummary?: string;
+        selectionExplanations?: Record<string, string>;
+      } = {};
       if (existingDraftData) {
         try {
           existingData = JSON.parse(existingDraftData);

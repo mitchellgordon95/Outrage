@@ -92,7 +92,8 @@ Example format:
     });
     
     // Parse the response to extract the JSON object
-    const responseText = response.content[0].text;
+    const responseContent = response.content[0];
+    const responseText = responseContent.type === 'text' ? responseContent.text : '';
     
     // Extract JSON object from the response text
     let jsonStr = responseText;
@@ -138,7 +139,7 @@ Example format:
           if (Number.isInteger(index) && index >= 0 && index < representatives.length) {
             const rep = representatives[index];
             const id = rep.id || `index-${index}`;
-            idExplanations[id] = explanation;
+            idExplanations[id] = explanation as string;
           }
         });
       }

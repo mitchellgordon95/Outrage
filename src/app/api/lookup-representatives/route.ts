@@ -1,5 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Representative } from '@/services/representatives';
+import { Representative, Contact, ContactType } from '@/services/representatives';
+
+// Interface for Cicero API officials
+interface CiceroOfficial {
+  sk?: string;
+  preferred_name?: string;
+  first_name?: string;
+  last_name?: string;
+  party?: string;
+  photo_origin_url?: string;
+  urls?: string[];
+  email_addresses?: string[];
+  web_form_url?: string;
+  valid_from?: string;
+  valid_to?: string;
+  addresses?: Array<{
+    phone?: string;
+  }>;
+  office?: {
+    title?: string;
+    district?: {
+      district_type?: string;
+    };
+    chamber?: {
+      name?: string;
+      type?: string;
+    };
+    representing_city?: string;
+    representing_state?: string;
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Filter officials to only include those currently in office
     const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
-    const currentOfficials = officials.filter(official => {
+    const currentOfficials = officials.filter((official: any) => {
       // Check valid_from date (must be in the past or today)
       const validFrom = official.valid_from ? 
         new Date(official.valid_from.split(' ')[0]).toISOString().split('T')[0] : null;
@@ -92,7 +122,7 @@ export async function POST(request: NextRequest) {
     const representatives: Representative[] = [];
     
     if (officials.length > 0) {
-      for (const official of officials) {
+      for (const official of officials as CiceroOfficial[]) {
         let level: 'country' | 'state' | 'local' = 'local';
         
         // More accurate detection of level based on district_type and chamber type
@@ -143,13 +173,13 @@ export async function POST(request: NextRequest) {
         }
         
         // Build contacts array from email addresses and web form URL
-        const contacts = [];
+        const contacts: Contact[] = [];
         
         // Add email contacts
         if (official.email_addresses && official.email_addresses.length > 0) {
           for (const email of official.email_addresses) {
             contacts.push({
-              type: 'email',
+              type: 'email' as ContactType,
               value: email
             });
           }
@@ -158,7 +188,7 @@ export async function POST(request: NextRequest) {
         // Add web form contact if available
         if (official.web_form_url) {
           contacts.push({
-            type: 'webform',
+            type: 'webform' as ContactType,
             value: official.web_form_url,
             description: 'Web Form'
           });

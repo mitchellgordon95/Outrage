@@ -71,7 +71,7 @@ export default function DraftPreviewPage() {
       
       // Initialize drafts with loading state
       const initialDrafts = new Map<number, RepresentativeDraft>();
-      reps.forEach((_, index) => {
+      reps.forEach((rep: Representative, index: number) => {
         initialDrafts.set(index, {
           subject: '',
           content: '',
@@ -93,7 +93,7 @@ export default function DraftPreviewPage() {
         console.log('Generating drafts with demands:', validDemands);
         
         // Generate drafts for each representative in parallel
-        reps.forEach((rep, index) => {
+        reps.forEach((rep: Representative, index: number) => {
           generateDraftForRepresentativeWithDemands(rep, index, validDemands, storedPersonalInfo);
         });
         
@@ -207,9 +207,17 @@ export default function DraftPreviewPage() {
     }
   };
 
+  interface LinkToOpen {
+    url: string;
+    name: string;
+    type: string;
+  }
+
   const handleSendMessages = () => {
-    // Create mailto links or open web forms for each representative with a completed draft
-    representatives.forEach((rep, index) => {
+    // Create an array of links to open to avoid popup blocking
+    const linksToOpen: LinkToOpen[] = [];
+    
+    representatives.forEach((rep: Representative, index: number) => {
       const draft = drafts.get(index);
       if (draft?.status === 'complete' && rep.contacts && rep.contacts.length > 0) {
         // Look for email contact first
@@ -219,16 +227,35 @@ export default function DraftPreviewPage() {
         // Prioritize email over webform
         if (emailContact) {
           const mailtoLink = `mailto:${emailContact.value}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
-          window.open(mailtoLink, '_blank');
+          linksToOpen.push({ url: mailtoLink, name: rep.name, type: 'email' });
         } else if (webformContact) {
-          // For webforms, we can only open the URL and the user will need to copy-paste
-          window.open(webformContact.value, '_blank');
-          
-          // Optionally, we could add code here to show a modal with copy buttons for the subject and content
-          // For simplicity, we're just opening the web form for now
+          linksToOpen.push({ url: webformContact.value, name: rep.name, type: 'webform' });
         }
       }
     });
+    
+    if (linksToOpen.length === 0) {
+      alert("No contact methods available for your selected representatives.");
+      return;
+    }
+    
+    // Show confirmation with count of tabs to be opened
+    const emailCount = linksToOpen.filter(link => link.type === 'email').length;
+    const webformCount = linksToOpen.filter(link => link.type === 'webform').length;
+    
+    const confirmMessage = `This will open:\n` + 
+      `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` +
+      `${webformCount} web ${webformCount === 1 ? 'form' : 'forms'}\n\n` +
+      `Your browser may block popups. Please allow popups for this site.`;
+    
+    if (confirm(confirmMessage)) {
+      // Open each link with a slight delay to avoid popup blockers
+      linksToOpen.forEach((link: LinkToOpen, i: number) => {
+        setTimeout(() => {
+          window.open(link.url, '_blank');
+        }, i * 500); // 500ms delay between each window.open call
+      });
+    }
   };
 
   const getSelectedDraft = () => {
@@ -354,7 +381,7 @@ export default function DraftPreviewPage() {
                         const rep = representatives[selectedRepIndex!];
                         // When retrying, use the current state of demands
                         console.log('Retrying with current demands:', demands);
-                        generateDraftForRepresentativeWithDemands(rep, selectedRepIndex!, demands);
+                        generateDraftForRepresentativeWithDemands(rep, selectedRepIndex!, demands, personalInfo);
                       }}
                     >
                       Retry
