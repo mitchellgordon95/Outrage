@@ -936,6 +936,13 @@ export default function IssueDetailsPage() {
             {isDraftLoading ? 'Generating Draft...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Preview Draft'}
           </button>
         </div>
+        
+        {/* Footer with Cicero attribution */}
+        <div className="mt-8 pt-4 border-t border-gray-200">
+          <div className="text-center text-gray-500 text-sm">
+            <p>Representative lookup powered by <a href="https://www.cicerodata.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Cicero</a></p>
+          </div>
+        </div>
       </div>
     </main>
   );

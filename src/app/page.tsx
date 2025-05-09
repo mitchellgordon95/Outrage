@@ -235,11 +235,6 @@ export default function Home() {
           </div>
         </div>
         
-        <div className="mt-16 pt-8 border-t border-gray-200">
-          <div className="text-center text-gray-500 text-sm">
-            <p>Powered by data from the Governance Project at techandciviclife.org</p>
-          </div>
-        </div>
       </div>
     </main>
   );
