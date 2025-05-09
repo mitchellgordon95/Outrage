@@ -350,6 +350,24 @@ export default function IssueDetailsPage() {
     fetchRepresentatives(newAddress);
   };
 
+  const handleClearForm = () => {
+    // Ask for confirmation
+    if (confirm("Are you sure you want to clear all entries? This cannot be undone.")) {
+      // Clear demands
+      setDemands(['']);
+      
+      // Clear personal info
+      setPersonalInfo('');
+      
+      // Clear selected representatives
+      setSelectedReps(new Set<number>());
+      
+      // Clear selection summary and explanations
+      setSelectionSummary('');
+      setSelectionExplanations({});
+    }
+  };
+
   const handleGenerateDraft = async () => {
     // First check if there are any valid demands entered
     const validDemands = demands.filter(demand => demand.trim());
@@ -882,8 +900,17 @@ export default function IssueDetailsPage() {
           </div>
         </div>
         
-        {/* Draft Generation Button */}
-        <div className="mt-8 mb-4">
+        {/* Action Buttons */}
+        <div className="mt-8 mb-4 flex gap-4">
+          {/* Clear Form Button */}
+          <button
+            onClick={handleClearForm}
+            className="py-3 px-6 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
+          >
+            Clear Form
+          </button>
+          
+          {/* Draft Generation Button */}
           <button
             onClick={handleGenerateDraft}
             disabled={
@@ -892,7 +919,7 @@ export default function IssueDetailsPage() {
               selectedReps.size === 0 || 
               demands.filter(d => d.trim()).length === 0
             }
-            className="w-full py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="flex-1 py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isDraftLoading ? 'Generating Draft...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Preview Draft'}
           </button>
