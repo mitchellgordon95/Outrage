@@ -221,23 +221,20 @@ export async function POST(request: NextRequest) {
               }
               description = 'Twitter';
             } else if (identifier.identifier_type === 'FACEBOOK' || 
-                       identifier.identifier_type === 'FACEBOOK-CAMPAIGN' || 
                        identifier.identifier_type === 'FACEBOOK-OFFICIAL') {
+              // Exclude FACEBOOK-CAMPAIGN
               contactType = 'facebook';
               if (!value.startsWith('http')) {
                 value = 'https://www.facebook.com/' + value;
               }
-              description = identifier.identifier_type === 'FACEBOOK-CAMPAIGN' ? 'Facebook (Campaign)' : 
-                            identifier.identifier_type === 'FACEBOOK-OFFICIAL' ? 'Facebook (Official)' : 
-                            'Facebook';
-            } else if (identifier.identifier_type === 'INSTAGRAM' || 
-                       identifier.identifier_type === 'INSTAGRAM-CAMPAIGN') {
+              description = identifier.identifier_type === 'FACEBOOK-OFFICIAL' ? 'Facebook (Official)' : 'Facebook';
+            } else if (identifier.identifier_type === 'INSTAGRAM') {
+              // Exclude INSTAGRAM-CAMPAIGN
               contactType = 'instagram';
               if (!value.startsWith('http') && !value.startsWith('@')) {
                 value = '@' + value;
               }
-              description = identifier.identifier_type === 'INSTAGRAM-CAMPAIGN' ? 
-                            'Instagram (Campaign)' : 'Instagram';
+              description = 'Instagram';
             }
             
             // Add to contacts if valid type was determined
