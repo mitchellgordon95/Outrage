@@ -751,11 +751,17 @@ export default function IssueDetailsPage() {
                                         className={`text-xs px-2 py-0.5 rounded-full ${
                                           contact.type === 'email' ? 'bg-green-50 text-green-700 border border-green-200' : 
                                           contact.type === 'webform' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                          contact.type === 'facebook' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                          contact.type === 'twitter' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                                          contact.type === 'instagram' ? 'bg-pink-50 text-pink-700 border border-pink-200' :
                                           'bg-gray-50 text-gray-700 border border-gray-200'
                                         }`}
                                       >
                                         {contact.type === 'email' ? '✉️' : 
                                          contact.type === 'webform' ? '🌐' : 
+                                         contact.type === 'facebook' ? '📘' :
+                                         contact.type === 'twitter' ? '🐦' :
+                                         contact.type === 'instagram' ? '📸' :
                                          '📞'} {contact.description || contact.type}
                                       </span>
                                     ))}
