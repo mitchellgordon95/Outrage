@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Representative, Contact, ContactType } from '@/services/representatives';
 
+// Cicero API identifier interface
+interface CiceroIdentifier {
+  identifier_type: string;
+  identifier_value: string;
+  id?: number;
+}
+
 // Interface for Cicero API officials
 interface CiceroOfficial {
   sk?: string;
@@ -29,6 +36,7 @@ interface CiceroOfficial {
     representing_city?: string;
     representing_state?: string;
   };
+  identifiers?: CiceroIdentifier[];
 }
 
 export async function POST(request: NextRequest) {
@@ -172,7 +180,7 @@ export async function POST(request: NextRequest) {
           officeTitle = `${officeTitle} of ${state}`;
         }
         
-        // Build contacts array from email addresses and web form URL
+        // Build contacts array from email addresses, web form URL, and social media
         const contacts: Contact[] = [];
         
         // Add email contacts
@@ -192,6 +200,55 @@ export async function POST(request: NextRequest) {
             value: official.web_form_url,
             description: 'Web Form'
           });
+        }
+        
+        // Add social media contacts from identifiers
+        if (official.identifiers && official.identifiers.length > 0) {
+          for (const identifier of official.identifiers) {
+            let contactType: ContactType | null = null;
+            let value = identifier.identifier_value;
+            let description: string | undefined;
+            
+            // Process based on identifier type
+            if (identifier.identifier_type === 'TWITTER') {
+              contactType = 'twitter';
+              // Clean up value if needed (add @ if missing, or extract handle from URL)
+              if (!value.startsWith('@') && !value.includes('/')) {
+                value = '@' + value;
+              } else if (value.includes('twitter.com/')) {
+                const handle = value.split('twitter.com/').pop();
+                if (handle) value = '@' + handle.replace(/\/$/, '');
+              }
+              description = 'Twitter';
+            } else if (identifier.identifier_type === 'FACEBOOK' || 
+                       identifier.identifier_type === 'FACEBOOK-CAMPAIGN' || 
+                       identifier.identifier_type === 'FACEBOOK-OFFICIAL') {
+              contactType = 'facebook';
+              if (!value.startsWith('http')) {
+                value = 'https://www.facebook.com/' + value;
+              }
+              description = identifier.identifier_type === 'FACEBOOK-CAMPAIGN' ? 'Facebook (Campaign)' : 
+                            identifier.identifier_type === 'FACEBOOK-OFFICIAL' ? 'Facebook (Official)' : 
+                            'Facebook';
+            } else if (identifier.identifier_type === 'INSTAGRAM' || 
+                       identifier.identifier_type === 'INSTAGRAM-CAMPAIGN') {
+              contactType = 'instagram';
+              if (!value.startsWith('http') && !value.startsWith('@')) {
+                value = '@' + value;
+              }
+              description = identifier.identifier_type === 'INSTAGRAM-CAMPAIGN' ? 
+                            'Instagram (Campaign)' : 'Instagram';
+            }
+            
+            // Add to contacts if valid type was determined
+            if (contactType) {
+              contacts.push({
+                type: contactType,
+                value,
+                description
+              });
+            }
+          }
         }
         
         representatives.push({

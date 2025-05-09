@@ -220,16 +220,27 @@ export default function DraftPreviewPage() {
     representatives.forEach((rep: Representative, index: number) => {
       const draft = drafts.get(index);
       if (draft?.status === 'complete' && rep.contacts && rep.contacts.length > 0) {
-        // Look for email contact first
+        // Look for email contact first, then webform, then social media
         const emailContact = rep.contacts.find(contact => contact.type === 'email');
         const webformContact = rep.contacts.find(contact => contact.type === 'webform');
+        const twitterContact = rep.contacts.find(contact => contact.type === 'twitter');
+        const facebookContact = rep.contacts.find(contact => contact.type === 'facebook');
+        const instagramContact = rep.contacts.find(contact => contact.type === 'instagram');
         
-        // Prioritize email over webform
+        // Prioritize email for sending messages
         if (emailContact) {
           const mailtoLink = `mailto:${emailContact.value}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
           linksToOpen.push({ url: mailtoLink, name: rep.name, type: 'email' });
         } else if (webformContact) {
           linksToOpen.push({ url: webformContact.value, name: rep.name, type: 'webform' });
+        } 
+        
+        // Add social media links for posting (optional)
+        if (twitterContact) {
+          // Create a Twitter intent URL with pre-filled content
+          const tweetText = `@${twitterContact.value.replace('@', '')} ${draft.subject}\n\n${draft.content.substring(0, 240)}...`;
+          const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+          linksToOpen.push({ url: tweetUrl, name: rep.name, type: 'twitter' });
         }
       }
     });
@@ -242,11 +253,13 @@ export default function DraftPreviewPage() {
     // Show confirmation with count of tabs to be opened
     const emailCount = linksToOpen.filter(link => link.type === 'email').length;
     const webformCount = linksToOpen.filter(link => link.type === 'webform').length;
+    const twitterCount = linksToOpen.filter(link => link.type === 'twitter').length;
     
     const confirmMessage = `This will open:\n` + 
-      `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` +
-      `${webformCount} web ${webformCount === 1 ? 'form' : 'forms'}\n\n` +
-      `Your browser may block popups. Please allow popups for this site.`;
+      (emailCount > 0 ? `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` : '') +
+      (webformCount > 0 ? `${webformCount} web ${webformCount === 1 ? 'form' : 'forms'}\n` : '') +
+      (twitterCount > 0 ? `${twitterCount} Twitter ${twitterCount === 1 ? 'post' : 'posts'}\n` : '') +
+      `\nYour browser may block popups. Please allow popups for this site.`;
     
     if (confirm(confirmMessage)) {
       // Open each link with a slight delay to avoid popup blockers
@@ -338,6 +351,9 @@ export default function DraftPreviewPage() {
                               <span key={i} className="mr-2">
                                 {contact.type === 'email' ? '✉️' : 
                                  contact.type === 'webform' ? '🌐' : 
+                                 contact.type === 'facebook' ? '📘' :
+                                 contact.type === 'twitter' ? '🐦' :
+                                 contact.type === 'instagram' ? '📸' :
                                  '📞'}
                               </span>
                             ))}
