@@ -297,10 +297,10 @@ export default function DemandsPage() {
               "Build more affordable housing in our community",
               "Fix the flooding problems on Elm Street"
             ]}
-            bgColorClass="bg-gray-50"
-            borderColorClass="border border-gray-300"
-            textColorClass="text-gray-800"
-            hoverColorClass="hover:bg-gray-100"
+            bgColorClass="bg-indigo-50"
+            borderColorClass="border border-indigo-200"
+            textColorClass="text-indigo-800"
+            hoverColorClass="hover:bg-indigo-100"
             demands={demands}
             onIssueClick={addIssue}
           />
