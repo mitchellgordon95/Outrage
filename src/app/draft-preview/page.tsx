@@ -26,7 +26,22 @@ export default function DraftPreviewPage() {
     // Load draft data from localStorage
     const storedDraftData = localStorage.getItem('draftData');
     if (!storedDraftData) {
-      router.push('/issue-details'); // Redirect back if no draft data
+      router.push('/demands'); // Redirect to demands if no draft data
+      return;
+    }
+
+    // Check if we've gone through the personal-info page
+    try {
+      const parsedData = JSON.parse(storedDraftData);
+
+      // Check if user has completed the personal-info step
+      if (!parsedData.personalInfoCompleted) {
+        router.push('/personal-info'); // Redirect to personal info page
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking completion status:', error);
+      router.push('/demands');
       return;
     }
 
@@ -115,9 +130,9 @@ export default function DraftPreviewPage() {
     }
   }, [router]);
 
-  // New function that takes demands and personalInfo as parameters to avoid state race conditions
+  // Generate draft for a specific representative
   const generateDraftForRepresentativeWithDemands = async (
-    representative: Representative, 
+    representative: Representative,
     index: number,
     demandsList: string[],
     personalInfoData: string
@@ -288,13 +303,37 @@ export default function DraftPreviewPage() {
       </header>
       
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => router.push('/issue-details')}
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <span className="mr-2">←</span> Back to Representatives
-          </button>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <button
+              onClick={() => router.push('/personal-info')}
+              className="text-primary hover:underline flex items-center"
+            >
+              <span className="mr-1">←</span> Back to Personal Info
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</div>
+              <div className="text-sm">Demands</div>
+            </div>
+            <div className="h-1 bg-primary flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">2</div>
+              <div className="text-sm">Representatives</div>
+            </div>
+            <div className="h-1 bg-primary flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">3</div>
+              <div className="text-sm">Personal Info</div>
+            </div>
+            <div className="h-1 bg-primary flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">4</div>
+              <div className="text-sm font-bold">Preview</div>
+            </div>
+          </div>
         </div>
         
         <h1 className="text-2xl font-bold mb-6">Email Draft Preview</h1>
@@ -431,10 +470,10 @@ export default function DraftPreviewPage() {
         
         <div className="flex justify-between mt-8">
           <button
-            onClick={() => router.push('/issue-details')}
+            onClick={() => router.push('/personal-info')}
             className="py-3 px-6 border border-gray-300 rounded-md hover:bg-gray-100"
           >
-            Back to Representatives
+            Back to Personal Info
           </button>
           
           <button

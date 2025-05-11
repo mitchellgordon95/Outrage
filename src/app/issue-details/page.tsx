@@ -417,12 +417,12 @@ export default function IssueDetailsPage() {
       };
       
       console.log('Draft data being saved:', draftData);
-      
-      // Save to localStorage for the draft preview page
+
+      // Save to localStorage
       localStorage.setItem('draftData', JSON.stringify(draftData));
-      
-      // Navigate to the draft preview page where actual generation will happen
-      router.push('/draft-preview');
+
+      // Navigate to the personal info page
+      router.push('/personal-info');
     } catch (error) {
       console.error('Error preparing draft data:', error);
       setIsDraftLoading(false);
@@ -441,6 +441,37 @@ export default function IssueDetailsPage() {
       
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold mb-6">Select Your Representatives</h1>
+
+        {/* Navigation progress */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <button onClick={() => router.push('/demands')} className="text-primary hover:underline flex items-center">
+              <span className="mr-1">←</span> Back to Demands
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</div>
+              <div className="text-sm">Demands</div>
+            </div>
+            <div className="h-1 bg-primary flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">2</div>
+              <div className="text-sm font-bold">Representatives</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
+              <div className="text-sm text-gray-600">Personal Info</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">4</div>
+              <div className="text-sm text-gray-600">Preview</div>
+            </div>
+          </div>
+        </div>
         {/* Address display with change button */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">
           {isEditingAddress ? (
@@ -910,7 +941,7 @@ export default function IssueDetailsPage() {
             }
             className="flex-1 py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isDraftLoading ? 'Generating Draft...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Preview Draft'}
+            {isDraftLoading ? 'Loading...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Continue to Personal Info'}
           </button>
         </div>
         

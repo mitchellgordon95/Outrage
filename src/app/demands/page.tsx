@@ -8,7 +8,6 @@ export default function DemandsPage() {
   const router = useRouter();
   const DEFAULT_DEMAND = 'Do a better job';
   const [demands, setDemands] = useState<string[]>([DEFAULT_DEMAND]);
-  const [personalInfo, setPersonalInfo] = useState('');
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -19,25 +18,18 @@ export default function DemandsPage() {
       router.push('/'); // Redirect to home page to enter address
       return;
     }
-    
+
     setAddress(storedAddress);
-    
+
     // Check if we have draft data from previous visit
     const storedDraftData = localStorage.getItem('draftData');
     if (storedDraftData) {
       try {
-        const {
-          demands: storedDemands,
-          personalInfo: storedPersonalInfo
-        } = JSON.parse(storedDraftData);
-        
-        // Restore demands and personal info
+        const { demands: storedDemands } = JSON.parse(storedDraftData);
+
+        // Restore demands
         if (Array.isArray(storedDemands) && storedDemands.length > 0) {
           setDemands(storedDemands);
-        }
-        
-        if (storedPersonalInfo) {
-          setPersonalInfo(storedPersonalInfo);
         }
       } catch (error) {
         console.error('Error restoring draft data:', error);
@@ -48,22 +40,22 @@ export default function DemandsPage() {
   // Save state whenever any relevant state changes
   useEffect(() => {
     if (!address) return; // Don't save if we don't have an address yet (initial load)
-    
+
     const draftData = localStorage.getItem('draftData');
-    let updatedDraftData = { demands, personalInfo };
-    
+    let updatedDraftData = { demands };
+
     // Preserve other properties if draftData exists
     if (draftData) {
       try {
         const parsedData = JSON.parse(draftData);
-        updatedDraftData = { ...parsedData, demands, personalInfo };
+        updatedDraftData = { ...parsedData, demands };
       } catch (error) {
         console.error('Error parsing existing draft data:', error);
       }
     }
-    
+
     localStorage.setItem('draftData', JSON.stringify(updatedDraftData));
-  }, [demands, personalInfo, address]);
+  }, [demands, address]);
 
   const handleAddDemand = () => {
     setDemands([...demands, '']);
@@ -83,12 +75,9 @@ export default function DemandsPage() {
 
   const handleClearForm = () => {
     // Ask for confirmation
-    if (confirm("Are you sure you want to clear all entries? This cannot be undone.")) {
+    if (confirm("Are you sure you want to clear all demands? This cannot be undone.")) {
       // Clear demands
       setDemands(['']);
-      
-      // Clear personal info
-      setPersonalInfo('');
     }
   };
 
@@ -135,9 +124,40 @@ export default function DemandsPage() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">What Do You Want Your Representatives to Do?</h2>
           <p className="text-gray-600 mb-6">
-            Enter specific demands or issues you want your elected officials to address. 
-            Be clear and concise for the most effective communication.
+            Enter specific demands or issues you want your elected officials to address.
+            Feel free to be informal and direct - short, passionate statements often work best!
           </p>
+
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-700 mb-2">Common Issues (Click to Add)</h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "Fix the potholes on Main Street",
+                "Lower property taxes",
+                "Fund more public transportation",
+                "Increase school funding",
+                "Support renewable energy initiatives",
+                "Address homelessness in our community",
+                "Improve public safety",
+                "Support small businesses",
+                "Fix the water quality issues",
+                "Create more affordable housing"
+              ].map((issue, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    // Add this issue as a new demand if it doesn't already exist
+                    if (!demands.includes(issue)) {
+                      setDemands([...demands, issue]);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md text-blue-700 text-sm hover:bg-blue-100"
+                >
+                  {issue}
+                </button>
+              ))}
+            </div>
+          </div>
           
           <div className="space-y-3 mb-6">
             {demands.map((demand, index) => (
@@ -166,21 +186,33 @@ export default function DemandsPage() {
           >
             + Add Another Demand
           </button>
-          
-          <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
-          <div className="mb-8">
-            <textarea
-              value={personalInfo}
-              onChange={(e) => setPersonalInfo(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
-              placeholder="Name, Party Affiliation, Demographic Info, etc."
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              This information will make your email more personal and effective.
-            </p>
-          </div>
         </div>
         
+        {/* Navigation progress */}
+        <div className="mb-8 mt-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</div>
+              <div className="text-sm font-bold">Demands</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">2</div>
+              <div className="text-sm text-gray-600">Representatives</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
+              <div className="text-sm text-gray-600">Personal Info</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">4</div>
+              <div className="text-sm text-gray-600">Preview</div>
+            </div>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="mt-8 mb-4 flex gap-4">
           {/* Clear Form Button */}
@@ -188,9 +220,9 @@ export default function DemandsPage() {
             onClick={handleClearForm}
             className="py-3 px-6 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
           >
-            Clear Form
+            Clear Demands
           </button>
-          
+
           {/* Continue Button */}
           <button
             onClick={handleContinue}
