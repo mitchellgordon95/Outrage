@@ -7,7 +7,9 @@ import { parseDraftData, getProgressState } from '@/utils/navigation';
 
 export default function PersonalInfoPage() {
   const router = useRouter();
-  const [personalInfo, setPersonalInfo] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [customItems, setCustomItems] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<{[key: string]: boolean}>({});
   const [address, setAddress] = useState('');
   const [demands, setDemands] = useState<string[]>([]);
   const [selectedReps, setSelectedReps] = useState<number[]>([]);
@@ -51,13 +53,78 @@ export default function PersonalInfoPage() {
 
     // Set personal info if available
     if (draftData.personalInfo) {
-      setPersonalInfo(draftData.personalInfo);
+      const lines = draftData.personalInfo.split('\n').filter(line => line.trim() !== '');
+      
+      if (lines.length > 0) {
+        // First line is the name
+        setNameInput(lines[0] || '');
+        
+        if (lines.length > 1) {
+          // Process the rest of the lines
+          const newSelected: {[key: string]: boolean} = {};
+          const newCustomItems: string[] = [];
+          
+          // Define all predefined items
+          const allPredefinedItems = [
+            // Identity/Role
+            "Concerned citizen", "Longtime resident", "Local business owner", 
+            "Parent of school-age children", "Community organizer",
+            // Party Affiliation
+            "Registered Democrat", "Registered Republican", "Registered Independent", 
+            "Lifelong Democrat", "Lifelong Republican", "Swing voter",
+            // Voting History
+            "I vote in every election", "I've voted in this district for 5+ years", 
+            "I've voted in this district for 10+ years", "I've voted in this district for 20+ years", 
+            "First-time voter",
+            // Age
+            "18-24 year old", "25-34 year old", "35-44 year old", 
+            "45-54 year old", "55-64 year old", "65+ year old",
+            // Race/Ethnicity
+            "African American / Black", "Asian American / Pacific Islander", 
+            "Hispanic / Latino", "Native American / Indigenous", 
+            "White / Caucasian", "Multiracial"
+          ];
+          
+          // Process each line after the name
+          lines.slice(1).forEach(line => {
+            if (allPredefinedItems.includes(line)) {
+              // It's a predefined item, mark it as selected
+              newSelected[line] = true;
+            } else {
+              // It's a custom item
+              newCustomItems.push(line);
+            }
+          });
+          
+          setSelectedItems(newSelected);
+          setCustomItems(newCustomItems);
+        }
+      }
     }
   }, [router]);
   
   // Save state whenever personal info changes
   useEffect(() => {
-    if (!address || personalInfo === undefined) return; // Don't save if address is not loaded yet
+    if (!address) return; // Don't save if address is not loaded yet
+    
+    // Combine name, selected items, and custom items for storage
+    const personalInfoLines = [nameInput];
+    
+    // Add selected predefined items
+    Object.keys(selectedItems).forEach(item => {
+      if (selectedItems[item]) {
+        personalInfoLines.push(item);
+      }
+    });
+    
+    // Add custom items
+    customItems.forEach(item => {
+      if (item.trim()) {
+        personalInfoLines.push(item);
+      }
+    });
+    
+    const personalInfo = personalInfoLines.join('\n');
 
     // Get existing data
     const existingData = parseDraftData() || {};
@@ -69,23 +136,67 @@ export default function PersonalInfoPage() {
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [personalInfo, address]);
+  }, [nameInput, selectedItems, customItems, address]);
+
+  const toggleItem = (item: string) => {
+    setSelectedItems(prev => ({
+      ...prev,
+      [item]: !prev[item]
+    }));
+  };
+
+  const addCustomItem = () => {
+    setCustomItems([...customItems, ""]);
+  };
+
+  const removeCustomItem = (index: number) => {
+    const newItems = [...customItems];
+    newItems.splice(index, 1);
+    setCustomItems(newItems);
+  };
+
+  const updateCustomItem = (index: number, value: string) => {
+    const newItems = [...customItems];
+    newItems[index] = value;
+    setCustomItems(newItems);
+  };
 
   const handleClearInfo = () => {
     if (confirm("Are you sure you want to clear your personal information? This cannot be undone.")) {
-      setPersonalInfo('');
+      setNameInput('');
+      setSelectedItems({});
+      setCustomItems([]);
     }
   };
 
   const handleContinue = () => {
     setIsLoading(true);
 
+    // Combine everything for storage (same as in the useEffect)
+    const personalInfoLines = [nameInput];
+    
+    // Add selected predefined items
+    Object.keys(selectedItems).forEach(item => {
+      if (selectedItems[item]) {
+        personalInfoLines.push(item);
+      }
+    });
+    
+    // Add custom items
+    customItems.forEach(item => {
+      if (item.trim()) {
+        personalInfoLines.push(item);
+      }
+    });
+    
+    const personalInfo = personalInfoLines.join('\n');
+
     // Mark this step as completed in localStorage
     const existingData = parseDraftData() || {};
 
     const updatedData = {
       ...existingData,
-      personalInfo, // Make sure personal info is saved
+      personalInfo,
       personalInfoCompleted: true // Mark this step as completed
     };
 
@@ -184,11 +295,49 @@ export default function PersonalInfoPage() {
         </div>
         
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Personal Information</h2>
+          <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
           <p className="text-gray-600 mb-4">
             Adding personal information helps make your message more effective.
-            Click items to add or type your own.
+            Click items to select them.
           </p>
+
+          {/* Name input */}
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-700 mb-1">Your Name</h3>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Your Name"
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Identity/Role options */}
+          <div className="mb-4">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Your Identity/Role</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Concerned citizen",
+                "Longtime resident",
+                "Local business owner",
+                "Parent of school-age children",
+                "Community organizer"
+              ].map((item, index) => (
+                <button
+                  key={`name-${index}`}
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-teal-600 border-teal-700 text-white' 
+                      : 'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100'
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Party affiliations */}
           <div className="mb-4">
@@ -204,11 +353,12 @@ export default function PersonalInfoPage() {
               ].map((item, index) => (
                 <button
                   key={`party-${index}`}
-                  onClick={() => {
-                    const newInfo = personalInfo ? personalInfo + "\n" + item : item;
-                    setPersonalInfo(newInfo);
-                  }}
-                  className="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs hover:bg-blue-100"
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-blue-600 border-blue-700 text-white' 
+                      : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                  }`}
                 >
                   {item}
                 </button>
@@ -229,11 +379,12 @@ export default function PersonalInfoPage() {
               ].map((item, index) => (
                 <button
                   key={`voting-${index}`}
-                  onClick={() => {
-                    const newInfo = personalInfo ? personalInfo + "\n" + item : item;
-                    setPersonalInfo(newInfo);
-                  }}
-                  className="px-2 py-1 bg-green-50 border border-green-200 rounded text-green-700 text-xs hover:bg-green-100"
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-green-600 border-green-700 text-white' 
+                      : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                  }`}
                 >
                   {item}
                 </button>
@@ -255,11 +406,12 @@ export default function PersonalInfoPage() {
               ].map((item, index) => (
                 <button
                   key={`age-${index}`}
-                  onClick={() => {
-                    const newInfo = personalInfo ? personalInfo + "\n" + item : item;
-                    setPersonalInfo(newInfo);
-                  }}
-                  className="px-2 py-1 bg-amber-50 border border-amber-200 rounded text-amber-700 text-xs hover:bg-amber-100"
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-amber-600 border-amber-700 text-white' 
+                      : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                  }`}
                 >
                   {item}
                 </button>
@@ -281,11 +433,12 @@ export default function PersonalInfoPage() {
               ].map((item, index) => (
                 <button
                   key={`race-${index}`}
-                  onClick={() => {
-                    const newInfo = personalInfo ? personalInfo + "\n" + item : item;
-                    setPersonalInfo(newInfo);
-                  }}
-                  className="px-2 py-1 bg-purple-50 border border-purple-200 rounded text-purple-700 text-xs hover:bg-purple-100"
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-purple-600 border-purple-700 text-white' 
+                      : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                  }`}
                 >
                   {item}
                 </button>
@@ -293,47 +446,29 @@ export default function PersonalInfoPage() {
             </div>
           </div>
 
-          {/* Personal Info Textarea */}
+          {/* Custom Personal Info Items */}
           <div className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-1">Your Personal Information</h3>
+            <h3 className="font-medium text-gray-700 mb-1">Other</h3>
             <div className="space-y-2">
-              {personalInfo.split('\n').map((line, index) =>
-                line ? (
-                  <div key={index} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={line}
-                      onChange={(e) => {
-                        const lines = personalInfo.split('\n');
-                        lines[index] = e.target.value;
-                        setPersonalInfo(lines.join('\n'));
-                      }}
-                      className="flex-1 p-2 border border-gray-300 rounded-md"
-                    />
-                    <button
-                      onClick={() => {
-                        const lines = personalInfo.split('\n');
-                        lines.splice(index, 1);
-                        setPersonalInfo(lines.join('\n'));
-                      }}
-                      className="p-2 text-red-500 hover:text-red-700"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : null
-              )}
-              {!personalInfo && (
-                <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
-                  <p className="text-gray-500">No personal information added yet. Click an option above or use the "Add Custom Information" button below.</p>
+              {customItems.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateCustomItem(index, e.target.value)}
+                    className="flex-1 p-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    onClick={() => removeCustomItem(index)}
+                    className="p-2 text-red-500 hover:text-red-700"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )}
+              ))}
             </div>
             <button
-              onClick={() => {
-                const newInfo = personalInfo ? personalInfo + "\n" : "";
-                setPersonalInfo(newInfo + "");
-              }}
+              onClick={addCustomItem}
               className="mt-2 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100 text-sm"
             >
               + Add Custom Information
