@@ -128,22 +128,15 @@ export default function DemandsPage() {
             Feel free to be informal and direct - short, passionate statements often work best!
           </p>
 
-          <div className="mb-6">
-            <h3 className="font-medium text-gray-700 mb-2">Common Issues (Click to Add)</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="mb-4">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Common Issues (Click to Add)</h3>
+            <div className="flex flex-wrap gap-1.5">
               {[
                 "Bring home Kilmar Garcia who was wrongfully deported",
                 "End the trade war by eliminating tariffs",
-                "Fix the potholes on Main Street",
-                "Lower property taxes",
-                "Fund more public transportation",
-                "Increase school funding",
-                "Support renewable energy initiatives",
-                "Address homelessness in our community",
-                "Improve public safety",
-                "Support small businesses",
-                "Fix the water quality issues",
-                "Create more affordable housing"
+                "Fix potholes on Main St between Oak and Pine",
+                "Lower property taxes by reducing millage to 15",
+                "Increase funding for McKinley High's science lab"
               ].map((issue, index) => (
                 <button
                   key={index}
@@ -153,7 +146,7 @@ export default function DemandsPage() {
                       setDemands([...demands, issue]);
                     }
                   }}
-                  className="px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md text-blue-700 text-sm hover:bg-blue-100"
+                  className="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs hover:bg-blue-100"
                 >
                   {issue}
                 </button>
