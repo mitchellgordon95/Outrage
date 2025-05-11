@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseDraftData } from '@/utils/navigation';
+import IssueCategory from '@/components/IssueCategory';
 
 export default function DemandsPage() {
   const router = useRouter();
   const [demands, setDemands] = useState<string[]>([]);
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // No longer need expandedCategories as the component handles this internally
   
   useEffect(() => {
     // Get the address from localStorage
@@ -67,6 +69,14 @@ export default function DemandsPage() {
     if (confirm("Are you sure you want to clear all demands? This cannot be undone.")) {
       // Clear demands
       setDemands([]);
+    }
+  };
+
+  // toggleCategory function removed as it's now handled by the IssueCategory component
+
+  const addIssue = (issue: string) => {
+    if (!demands.includes(issue)) {
+      setDemands([...demands, issue]);
     }
   };
 
@@ -138,43 +148,168 @@ export default function DemandsPage() {
               ))
             ) : (
               <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
-                <p className="text-gray-500">No demands added yet. Click an issue below or use the "Add Demand" button.</p>
+                <p className="text-gray-500">No demands added yet. Select issues from categories below or add your own.</p>
               </div>
             )}
           </div>
 
-          <div className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-1 text-sm">Common Issues (Click to Add)</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "Bring home Kilmar Garcia who was wrongfully deported",
-                "End the trade war by eliminating tariffs",
-                "Fix potholes on Main St between Oak and Pine",
-                "Lower property taxes by reducing millage to 15",
-                "Increase funding for McKinley High's science lab"
-              ].map((issue, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    // Add this issue as a new demand if it doesn't already exist
-                    if (!demands.includes(issue)) {
-                      setDemands([...demands, issue]);
-                    }
-                  }}
-                  className="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs hover:bg-blue-100"
-                >
-                  {issue}
-                </button>
-              ))}
-            </div>
+          {/* Economy Category */}
+          <IssueCategory
+            title="Economy & Business"
+            category="economy"
+            previewIssues={[
+              "End the trade war by eliminating tariffs",
+              "Lower property taxes for homeowners",
+              "Increase the minimum wage to $15 per hour"
+            ]}
+            moreIssues={[
+              "Provide tax incentives for small businesses",
+              "Reform corporate tax loopholes",
+              "Increase funding for job training programs",
+              "Pass a balanced budget amendment",
+              "Support local businesses affected by construction"
+            ]}
+            bgColorClass="bg-yellow-50"
+            borderColorClass="border border-yellow-200"
+            textColorClass="text-yellow-800"
+            hoverColorClass="hover:bg-yellow-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* Environment Category */}
+          <IssueCategory
+            title="Environment & Climate"
+            category="environment"
+            previewIssues={[
+              "Implement stronger clean water protections",
+              "Address climate change with bold legislation",
+              "Oppose fracking in our county"
+            ]}
+            moreIssues={[
+              "Fund renewable energy research and development",
+              "Improve public transport to reduce emissions",
+              "Address flooding issues in our community",
+              "Enforce stricter pollution regulations",
+              "Create more green spaces in urban areas"
+            ]}
+            bgColorClass="bg-green-50"
+            borderColorClass="border border-green-200"
+            textColorClass="text-green-800"
+            hoverColorClass="hover:bg-green-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* Politics Category */}
+          <IssueCategory
+            title="Politics & Governance"
+            category="politics"
+            previewIssues={[
+              "Support ranked choice voting reform",
+              "End partisan gerrymandering",
+              "Protect voting rights and access"
+            ]}
+            moreIssues={[
+              "Limit corporate money in politics",
+              "Increase transparency in campaign financing",
+              "Support term limits for elected officials",
+              "Hold town halls more frequently",
+              "Reform the electoral college system"
+            ]}
+            bgColorClass="bg-blue-50"
+            borderColorClass="border border-blue-200"
+            textColorClass="text-blue-800"
+            hoverColorClass="hover:bg-blue-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* Healthcare Category */}
+          <IssueCategory
+            title="Healthcare & Wellbeing"
+            category="healthcare"
+            previewIssues={[
+              "Lower prescription drug prices",
+              "Support Medicare for All legislation",
+              "Improve mental health resources"
+            ]}
+            moreIssues={[
+              "Protect reproductive healthcare access",
+              "Increase funding for addiction treatment",
+              "Address hospital staffing shortages",
+              "Improve healthcare for veterans",
+              "Fund medical research for rare diseases"
+            ]}
+            bgColorClass="bg-red-50"
+            borderColorClass="border border-red-200"
+            textColorClass="text-red-800"
+            hoverColorClass="hover:bg-red-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* International Affairs Category */}
+          <IssueCategory
+            title="International Affairs"
+            category="international"
+            previewIssues={[
+              "Support peace negotiations in Ukraine",
+              "Address the humanitarian crisis in Gaza",
+              "Reform immigration policies"
+            ]}
+            moreIssues={[
+              "Reconsider foreign aid priorities",
+              "Advocate for human rights in authoritarian countries",
+              "Increase diplomatic engagement globally",
+              "Support international climate agreements",
+              "Bring home Kilmar Garcia who was wrongfully deported"
+            ]}
+            bgColorClass="bg-purple-50"
+            borderColorClass="border border-purple-200"
+            textColorClass="text-purple-800"
+            hoverColorClass="hover:bg-purple-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* Local Issues */}
+          <IssueCategory
+            title="Local Community Issues"
+            category="other"
+            previewIssues={[
+              "Fix potholes on Main St between Oak and Pine",
+              "Lower property taxes by reducing millage to 15",
+              "Increase funding for McKinley High's science lab"
+            ]}
+            moreIssues={[
+              "Improve streetlights in the downtown area",
+              "Address noise pollution from the local factory",
+              "Increase funding for public libraries",
+              "Build more affordable housing in our community",
+              "Fix the flooding problems on Elm Street"
+            ]}
+            bgColorClass="bg-gray-50"
+            borderColorClass="border border-gray-300"
+            textColorClass="text-gray-800"
+            hoverColorClass="hover:bg-gray-100"
+            demands={demands}
+            onIssueClick={addIssue}
+          />
+
+          {/* Custom demands section */}
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-700 mb-2">Add Your Own</h3>
+            <p className="text-sm text-gray-500 mb-3">
+              Have a specific issue not listed above? Add it here.
+            </p>
+            <button
+              onClick={handleAddDemand}
+              className="py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              + Add Custom Demand
+            </button>
           </div>
-          
-          <button
-            onClick={handleAddDemand}
-            className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
-          >
-            + Add Another Demand
-          </button>
         </div>
         
         {/* Navigation progress */}
