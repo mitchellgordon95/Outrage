@@ -6,8 +6,7 @@ import Link from 'next/link';
 
 export default function DemandsPage() {
   const router = useRouter();
-  const DEFAULT_DEMAND = 'Do a better job';
-  const [demands, setDemands] = useState<string[]>([DEFAULT_DEMAND]);
+  const [demands, setDemands] = useState<string[]>([]);
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -68,7 +67,6 @@ export default function DemandsPage() {
   };
 
   const handleRemoveDemand = (index: number) => {
-    if (demands.length <= 1) return;
     const newDemands = demands.filter((_, i) => i !== index);
     setDemands(newDemands);
   };
@@ -77,7 +75,7 @@ export default function DemandsPage() {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all demands? This cannot be undone.")) {
       // Clear demands
-      setDemands(['']);
+      setDemands([]);
     }
   };
 
@@ -155,24 +153,29 @@ export default function DemandsPage() {
           </div>
           
           <div className="space-y-3 mb-6">
-            {demands.map((demand, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={demand}
-                  onChange={(e) => handleDemandChange(index, e.target.value)}
-                  placeholder={`Enter your demand here`}
-                  className="flex-1 p-2 border border-gray-300 rounded-md"
-                />
-                <button
-                  onClick={() => handleRemoveDemand(index)}
-                  className="p-2 text-red-500 hover:text-red-700"
-                  disabled={demands.length <= 1}
-                >
-                  ✕
-                </button>
+            {demands.length > 0 ? (
+              demands.map((demand, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={demand}
+                    onChange={(e) => handleDemandChange(index, e.target.value)}
+                    placeholder={`Enter your demand here`}
+                    className="flex-1 p-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    onClick={() => handleRemoveDemand(index)}
+                    className="p-2 text-red-500 hover:text-red-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
+                <p className="text-gray-500">No demands added yet. Click an issue above or use the "Add Demand" button below.</p>
               </div>
-            ))}
+            )}
           </div>
           
           <button
