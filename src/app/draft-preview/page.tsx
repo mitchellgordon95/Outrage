@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Representative } from '@/services/representatives';
+import { parseDraftData, getProgressState } from '@/utils/navigation';
 
 // Type for generated draft
 interface RepresentativeDraft {
@@ -23,116 +24,102 @@ export default function DraftPreviewPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load draft data from localStorage
-    const storedDraftData = localStorage.getItem('draftData');
-    if (!storedDraftData) {
-      router.push('/demands'); // Redirect to demands if no draft data
+    // Check for address
+    const storedAddress = localStorage.getItem('userAddress');
+    if (!storedAddress) {
+      router.replace('/'); // Redirect to home if no address
       return;
     }
-
-    // Check if we've gone through the personal-info page
-    try {
-      const parsedData = JSON.parse(storedDraftData);
-
-      // Check if user has completed the personal-info step
-      if (!parsedData.personalInfoCompleted) {
-        router.push('/personal-info'); // Redirect to personal info page
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking completion status:', error);
-      router.push('/demands');
+    
+    // Get draft data
+    const draftData = parseDraftData();
+    if (!draftData) {
+      router.replace('/demands'); // Redirect to demands if no draft data
       return;
     }
-
-    try {
-      const parsedData = JSON.parse(storedDraftData);
-      console.log('Parsed data from localStorage:', parsedData);
-      
-      const {
-        demands: storedDemands,
-        personalInfo: storedPersonalInfo,
-        name: storedName,
-        representatives: reps,
-        selectionSummary: storedSelectionSummary,
-        selectionExplanations: storedSelectionExplanations,
-        selectedReps: storedSelectedReps,
-      } = parsedData;
-      
-      console.log('Demands from localStorage:', storedDemands);
-      
-      // Check if demands is valid
-      if (!Array.isArray(storedDemands) || storedDemands.length === 0) {
-        console.error('No valid demands found in localStorage data');
-        router.push('/issue-details');
-        return;
-      }
-      
-      // Check if any demands have content
-      const validDemands = storedDemands.filter(demand => demand && demand.trim());
-      console.log('Valid demands after filtering:', validDemands);
-      
-      if (validDemands.length === 0) {
-        console.error('No valid demands after filtering');
-        router.push('/issue-details');
-        return;
-      }
-
-      // Set all state first
-      setDemands(validDemands); // Set only valid demands
-      setPersonalInfo(storedPersonalInfo);
-      console.log('Setting personal info from localStorage:', storedPersonalInfo);
-      setRepresentatives(reps);
-      
-      // Initialize drafts with loading state
-      const initialDrafts = new Map<number, RepresentativeDraft>();
-      reps.forEach((rep: Representative, index: number) => {
-        initialDrafts.set(index, {
-          subject: '',
-          content: '',
-          status: 'loading'
-        });
+    
+    // Check progress state
+    const progress = getProgressState(draftData);
+    
+    // Check and verify each required step
+    if (!progress.demands) {
+      router.replace('/demands');
+      return;
+    }
+    
+    if (!progress.representatives) {
+      router.replace('/issue-details');
+      return;
+    }
+    
+    if (!progress.personalInfo) {
+      router.replace('/personal-info');
+      return;
+    }
+    
+    // Get data for the draft generation
+    const {
+      demands: storedDemands,
+      personalInfo: storedPersonalInfo,
+      representatives: reps,
+      selectionSummary,
+      selectionExplanations,
+      selectedReps,
+    } = draftData;
+    
+    // Filter out invalid demands
+    const validDemands = (storedDemands || []).filter(demand => demand && demand.trim());
+    
+    // Double check that we have valid demands
+    if (validDemands.length === 0) {
+      console.error('No valid demands for draft generation');
+      router.replace('/demands');
+      return;
+    }
+    
+    // And representatives
+    if (!reps || !Array.isArray(reps) || reps.length === 0) {
+      console.error('No representatives found');
+      router.replace('/issue-details');
+      return;
+    }
+    
+    // Set state
+    setDemands(validDemands);
+    setPersonalInfo(storedPersonalInfo || '');
+    setRepresentatives(reps);
+    
+    // Initialize drafts with loading state
+    const initialDrafts = new Map<number, RepresentativeDraft>();
+    reps.forEach((rep: Representative, index: number) => {
+      initialDrafts.set(index, {
+        subject: '',
+        content: '',
+        status: 'loading'
       });
-      setDrafts(initialDrafts);
+    });
+    setDrafts(initialDrafts);
 
-      // Set the first representative as selected
-      if (reps.length > 0) {
-        setSelectedRepIndex(0);
-      }
-      
-      setIsLoading(false);
-      
-      // Use setTimeout to ensure state updates have been applied
-      // before generating drafts
-      setTimeout(() => {
-        console.log('Generating drafts with demands:', validDemands);
-        
-        // Generate drafts for each representative in parallel
-        reps.forEach((rep: Representative, index: number) => {
-          generateDraftForRepresentativeWithDemands(rep, index, validDemands, storedPersonalInfo);
-        });
-        
-        // Preserve the original selectionSummary and selectionExplanations in localStorage
-        // This ensures they're still available when returning to the issue details page
-        const updatedDraftData = {
-          demands: validDemands,
-          personalInfo: storedPersonalInfo,
-          representatives: reps,
-          selectedReps: storedSelectedReps,
-          selectionSummary: storedSelectionSummary,
-          selectionExplanations: storedSelectionExplanations
-        };
-        localStorage.setItem('draftData', JSON.stringify(updatedDraftData));
-      }, 0);
-    } catch (error) {
-      console.error('Error parsing draft data:', error);
-      router.push('/issue-details');
+    // Set the first representative as selected
+    if (reps.length > 0) {
+      setSelectedRepIndex(0);
     }
+    
+    setIsLoading(false);
+    
+    // Use setTimeout to ensure state updates have been applied
+    // before generating drafts
+    setTimeout(() => {
+      // Generate drafts for each representative in parallel
+      reps.forEach((rep: Representative, index: number) => {
+        generateDraftForRepresentativeWithDemands(rep, index, validDemands, storedPersonalInfo || '');
+      });
+    }, 0);
   }, [router]);
 
   // Generate draft for a specific representative
   const generateDraftForRepresentativeWithDemands = async (
-    representative: Representative,
+    representative: Representative, 
     index: number,
     demandsList: string[],
     personalInfoData: string

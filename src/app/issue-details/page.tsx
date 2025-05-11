@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Representative, getRepresentativesByAddress } from '@/services/representatives';
+import { parseDraftData, getProgressState } from '@/utils/navigation';
 
 export default function IssueDetailsPage() {
   const router = useRouter();
@@ -26,80 +27,73 @@ export default function IssueDetailsPage() {
     // Get the address from localStorage
     const storedAddress = localStorage.getItem('userAddress');
     if (!storedAddress) {
-      router.push('/'); // Redirect to home page to enter address
+      router.replace('/'); // Redirect to home page to enter address
       return;
     }
 
-    // Check if we have demands data
-    const storedDraftData = localStorage.getItem('draftData');
-    if (!storedDraftData) {
-      router.push('/demands'); // Redirect to demands page if no draft data
+    // Load draft data
+    const draftData = parseDraftData();
+    if (!draftData) {
+      router.replace('/demands'); // Redirect to demands page if no draft data
       return;
     }
 
-    try {
-      const parsedData = JSON.parse(storedDraftData);
+    // Check progress state
+    const progress = getProgressState(draftData);
 
-      // Check if we have valid demands
-      if (!parsedData.demands || !Array.isArray(parsedData.demands) ||
-          !parsedData.demands.some(demand => demand.trim())) {
-        router.push('/demands'); // Redirect to demands page if no valid demands
-        return;
-      }
-
-      // Set address and continue with the flow
-      setAddress(storedAddress);
-      setNewAddress(storedAddress);
-
-      const {
-        demands: storedDemands,
-        personalInfo: storedPersonalInfo,
-        selectedReps: storedSelectedReps,
-        selectionSummary: storedSummary,
-        selectionExplanations: storedExplanations
-      } = parsedData;
-
-      // Restore demands and personal info
-      if (Array.isArray(storedDemands) && storedDemands.length > 0) {
-        setDemands(storedDemands);
-      }
-
-      if (storedPersonalInfo) {
-        setPersonalInfo(storedPersonalInfo);
-      }
-
-      // Restore AI selection info if available
-      if (storedSummary) {
-        setSelectionSummary(storedSummary);
-      }
-
-      if (storedExplanations && typeof storedExplanations === 'object') {
-        setSelectionExplanations(storedExplanations);
-      }
-
-      // We'll restore selected reps after fetching representatives
-      const selectedRepsSet = new Set(storedSelectedReps || []);
-
-      // Fetch representatives and then restore selection
-      fetchRepresentatives(storedAddress, selectedRepsSet);
-    } catch (error) {
-      console.error('Error restoring draft data:', error);
-      router.push('/demands'); // Redirect to demands page on error
+    // Check if we have valid demands - required for this page
+    if (!progress.demands) {
+      router.replace('/demands'); // Redirect to demands page if no valid demands
+      return;
     }
+
+    // Set address and continue with the flow
+    setAddress(storedAddress);
+    setNewAddress(storedAddress);
+
+    // Restore data from draft
+    if (draftData.demands && Array.isArray(draftData.demands) && draftData.demands.length > 0) {
+      setDemands(draftData.demands);
+    }
+
+    if (draftData.personalInfo) {
+      setPersonalInfo(draftData.personalInfo);
+    }
+
+    // Restore AI selection info if available
+    if (draftData.selectionSummary) {
+      setSelectionSummary(draftData.selectionSummary);
+    }
+
+    if (draftData.selectionExplanations && typeof draftData.selectionExplanations === 'object') {
+      setSelectionExplanations(draftData.selectionExplanations);
+    }
+
+    // We'll restore selected reps after fetching representatives
+    const selectedRepsSet = new Set(draftData.selectedReps || []);
+
+    // Fetch representatives and then restore selection
+    fetchRepresentatives(storedAddress, selectedRepsSet);
   }, [router]);
   
   // Save state whenever any relevant state changes
   useEffect(() => {
     if (!address) return; // Don't save if we don't have an address yet (initial load)
-    
-    const draftData = {
+
+    // Get existing data
+    const existingData = parseDraftData() || {};
+
+    // Update with current state
+    const updatedData = {
+      ...existingData,
       demands,
       personalInfo,
       selectedReps: Array.from(selectedReps),
       selectionSummary,
       selectionExplanations
     };
-    localStorage.setItem('draftData', JSON.stringify(draftData));
+
+    localStorage.setItem('draftData', JSON.stringify(updatedData));
   }, [demands, personalInfo, selectedReps, address, selectionSummary, selectionExplanations]);
 
   // Set up Google Maps autocomplete when editing address

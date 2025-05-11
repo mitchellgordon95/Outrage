@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { parseDraftData, hasSubstantialProgress } from '@/utils/navigation';
 
 // Import from our custom type definition
 /// <reference path="../types/globals.d.ts" />
@@ -90,27 +91,20 @@ export default function Home() {
 
     setIsLoading(true);
 
-    // Check if we have existing draft data in localStorage
-    const existingDraftData = localStorage.getItem('draftData');
-
-    if (existingDraftData) {
-      // Ask the user if they want to continue where they left off or start fresh
-      const continueSession = confirm(
-        "We found your previous session. Would you like to continue where you left off?\n\n" +
-        "Click 'OK' to continue your previous session.\n" +
-        "Click 'Cancel' to start a new session."
-      );
-
-      if (!continueSession) {
-        // If user wants to start fresh, clear the draft data
-        localStorage.removeItem('draftData');
-      }
-    }
-
     // Store address in localStorage for use in the next page
     localStorage.setItem('userAddress', addressToSubmit);
 
-    // Navigate to the demands page first
+    // Check if we have existing draft data in localStorage with substantial progress
+    const draftData = parseDraftData();
+
+    // If there's substantial progress, show the continue session page
+    if (draftData && hasSubstantialProgress(draftData)) {
+      // Navigate to continue-session page to let user decide
+      router.push('/continue-session');
+      return;
+    }
+
+    // Navigate to the demands page first (if no existing data or no demands)
     router.push('/demands');
   };
 

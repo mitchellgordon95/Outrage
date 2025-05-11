@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { parseDraftData, getProgressState } from '@/utils/navigation';
 
 export default function PersonalInfoPage() {
   const router = useRouter();
@@ -16,67 +17,58 @@ export default function PersonalInfoPage() {
     // Get the address from localStorage
     const storedAddress = localStorage.getItem('userAddress');
     if (!storedAddress) {
-      router.push('/'); // Redirect to home page to enter address
+      router.replace('/'); // Redirect to home page to enter address
       return;
     }
-    
+
     setAddress(storedAddress);
-    
-    // Check if we have draft data
-    const storedDraftData = localStorage.getItem('draftData');
-    if (!storedDraftData) {
-      router.push('/demands'); // Redirect to demands page if no draft data
+
+    // Check for draft data
+    const draftData = parseDraftData();
+    if (!draftData) {
+      router.replace('/demands'); // Redirect to demands page if no draft data
       return;
     }
-    
-    try {
-      const parsedData = JSON.parse(storedDraftData);
-      
-      // Check if we have valid demands
-      if (!parsedData.demands || !Array.isArray(parsedData.demands) || 
-          !parsedData.demands.some(demand => demand.trim())) {
-        router.push('/demands'); // Redirect to demands page if no valid demands
-        return;
-      }
-      
-      // Check if we have selected representatives
-      if (!parsedData.selectedReps || !Array.isArray(parsedData.selectedReps) || 
-          parsedData.selectedReps.length === 0) {
-        router.push('/issue-details'); // Redirect to representatives selection if none selected
-        return;
-      }
-      
-      // Set stored data
-      setDemands(parsedData.demands || []);
-      setSelectedReps(parsedData.selectedReps || []);
-      
-      // Set personal info if available
-      if (parsedData.personalInfo) {
-        setPersonalInfo(parsedData.personalInfo);
-      }
-    } catch (error) {
-      console.error('Error parsing draft data:', error);
-      router.push('/demands');
+
+    // Check progress state
+    const progress = getProgressState(draftData);
+
+    // Check if we have valid demands - required for this page
+    if (!progress.demands) {
+      router.replace('/demands');
+      return;
+    }
+
+    // Check if we have selected representatives - required for this page
+    if (!progress.representatives) {
+      router.replace('/issue-details');
+      return;
+    }
+
+    // Set stored data
+    setDemands(draftData.demands || []);
+    setSelectedReps(draftData.selectedReps || []);
+
+    // Set personal info if available
+    if (draftData.personalInfo) {
+      setPersonalInfo(draftData.personalInfo);
     }
   }, [router]);
   
   // Save state whenever personal info changes
   useEffect(() => {
     if (!address || personalInfo === undefined) return; // Don't save if address is not loaded yet
-    
-    const draftData = localStorage.getItem('draftData');
-    if (draftData) {
-      try {
-        const parsedData = JSON.parse(draftData);
-        const updatedData = {
-          ...parsedData, 
-          personalInfo
-        };
-        localStorage.setItem('draftData', JSON.stringify(updatedData));
-      } catch (error) {
-        console.error('Error updating draft data:', error);
-      }
-    }
+
+    // Get existing data
+    const existingData = parseDraftData() || {};
+
+    // Update with current state
+    const updatedData = {
+      ...existingData,
+      personalInfo
+    };
+
+    localStorage.setItem('draftData', JSON.stringify(updatedData));
   }, [personalInfo, address]);
 
   const handleClearInfo = () => {
@@ -89,20 +81,15 @@ export default function PersonalInfoPage() {
     setIsLoading(true);
 
     // Mark this step as completed in localStorage
-    const draftData = localStorage.getItem('draftData');
-    if (draftData) {
-      try {
-        const parsedData = JSON.parse(draftData);
-        const updatedData = {
-          ...parsedData,
-          personalInfo, // Make sure personal info is saved
-          personalInfoCompleted: true // Mark this step as completed
-        };
-        localStorage.setItem('draftData', JSON.stringify(updatedData));
-      } catch (error) {
-        console.error('Error updating draft data:', error);
-      }
-    }
+    const existingData = parseDraftData() || {};
+
+    const updatedData = {
+      ...existingData,
+      personalInfo, // Make sure personal info is saved
+      personalInfoCompleted: true // Mark this step as completed
+    };
+
+    localStorage.setItem('draftData', JSON.stringify(updatedData));
 
     // Navigate to the draft preview page
     router.push('/draft-preview');

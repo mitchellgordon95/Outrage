@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { parseDraftData } from '@/utils/navigation';
 
 export default function DemandsPage() {
   const router = useRouter();
@@ -14,24 +15,18 @@ export default function DemandsPage() {
     // Get the address from localStorage
     const storedAddress = localStorage.getItem('userAddress');
     if (!storedAddress) {
-      router.push('/'); // Redirect to home page to enter address
+      router.replace('/'); // Redirect to home page to enter address
       return;
     }
 
     setAddress(storedAddress);
 
     // Check if we have draft data from previous visit
-    const storedDraftData = localStorage.getItem('draftData');
-    if (storedDraftData) {
-      try {
-        const { demands: storedDemands } = JSON.parse(storedDraftData);
-
-        // Restore demands
-        if (Array.isArray(storedDemands) && storedDemands.length > 0) {
-          setDemands(storedDemands);
-        }
-      } catch (error) {
-        console.error('Error restoring draft data:', error);
+    const draftData = parseDraftData();
+    if (draftData?.demands) {
+      // Restore demands if they exist
+      if (Array.isArray(draftData.demands) && draftData.demands.length > 0) {
+        setDemands(draftData.demands);
       }
     }
   }, [router]);
@@ -40,20 +35,16 @@ export default function DemandsPage() {
   useEffect(() => {
     if (!address) return; // Don't save if we don't have an address yet (initial load)
 
-    const draftData = localStorage.getItem('draftData');
-    let updatedDraftData = { demands };
+    // Get existing data or create new object
+    const existingData = parseDraftData() || {};
 
-    // Preserve other properties if draftData exists
-    if (draftData) {
-      try {
-        const parsedData = JSON.parse(draftData);
-        updatedDraftData = { ...parsedData, demands };
-      } catch (error) {
-        console.error('Error parsing existing draft data:', error);
-      }
-    }
+    // Update with current demands and save
+    const updatedData = {
+      ...existingData,
+      demands
+    };
 
-    localStorage.setItem('draftData', JSON.stringify(updatedDraftData));
+    localStorage.setItem('draftData', JSON.stringify(updatedData));
   }, [demands, address]);
 
   const handleAddDemand = () => {
