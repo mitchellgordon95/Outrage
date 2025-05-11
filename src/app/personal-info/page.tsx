@@ -315,7 +315,7 @@ export default function PersonalInfoPage() {
 
           {/* Identity/Role options */}
           <div className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-1 text-sm">Your Identity/Role</h3>
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Identity/Role</h3>
             <div className="flex flex-wrap gap-1.5">
               {[
                 "Concerned citizen",
