@@ -203,12 +203,13 @@ export async function POST(request: NextRequest) {
         }
         
         // Add social media contacts from identifiers
+        /* Commenting out social media identifier code
         if (official.identifiers && official.identifiers.length > 0) {
           for (const identifier of official.identifiers) {
             let contactType: ContactType | null = null;
             let value = identifier.identifier_value;
             let description: string | undefined;
-            
+
             // Process based on identifier type
             if (identifier.identifier_type === 'TWITTER') {
               contactType = 'twitter';
@@ -220,7 +221,7 @@ export async function POST(request: NextRequest) {
                 if (handle) value = '@' + handle.replace(/\/$/, '');
               }
               description = 'Twitter';
-            } else if (identifier.identifier_type === 'FACEBOOK' || 
+            } else if (identifier.identifier_type === 'FACEBOOK' ||
                        identifier.identifier_type === 'FACEBOOK-OFFICIAL') {
               // Exclude FACEBOOK-CAMPAIGN
               contactType = 'facebook';
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
               }
               description = 'Instagram';
             }
-            
+
             // Add to contacts if valid type was determined
             if (contactType) {
               contacts.push({
@@ -247,6 +248,7 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+        */
         
         representatives.push({
           id: official.sk || `${official.first_name}-${official.last_name}-${officeTitle}`.replace(/\s+/g, '-').toLowerCase(),
