@@ -132,6 +132,8 @@ export default function DemandsPage() {
             <h3 className="font-medium text-gray-700 mb-2">Common Issues (Click to Add)</h3>
             <div className="flex flex-wrap gap-2">
               {[
+                "Bring home Kilmar Garcia who was wrongfully deported",
+                "End the trade war by eliminating tariffs",
                 "Fix the potholes on Main Street",
                 "Lower property taxes",
                 "Fund more public transportation",
