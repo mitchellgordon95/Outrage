@@ -204,11 +204,9 @@ export default function PersonalInfoPage() {
           </p>
           
           <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-1">
-            <li>Your full name</li>
-            <li>How long you've lived in the area</li>
-            <li>Voting history in the district/state</li>
-            <li>Relevant personal experiences with the issue</li>
-            <li>Past interactions with the representative's office</li>
+            <li>Your name</li>
+            <li>Voting history / party affiliation</li>
+            <li>Demographics (race, age)</li>
           </ul>
           
           <textarea
