@@ -70,12 +70,12 @@ export default function PersonalInfoPage() {
             "Concerned citizen", "Longtime resident", "Local business owner", 
             "Parent of school-age children", "Community organizer",
             // Party Affiliation
-            "Registered Democrat", "Registered Republican", "Registered Independent", 
+            "Registered Democrat", "Registered Republican", "Independent",
             "Lifelong Democrat", "Lifelong Republican", "Swing voter",
             // Voting History
-            "I vote in every election", "I've voted in this district for 5+ years", 
-            "I've voted in this district for 10+ years", "I've voted in this district for 20+ years", 
-            "First-time voter",
+            "I vote in every election", "I've voted in this district for 5+ years",
+            "I've voted in this district for 10+ years", "I've voted in this district for 20+ years",
+            "First-time voter", "Haven't voted in a while",
             // Age
             "18-24 year old", "25-34 year old", "35-44 year old", 
             "45-54 year old", "55-64 year old", "65+ year old",
@@ -346,7 +346,7 @@ export default function PersonalInfoPage() {
               {[
                 "Registered Democrat",
                 "Registered Republican",
-                "Registered Independent",
+                "Independent",
                 "Lifelong Democrat",
                 "Lifelong Republican",
                 "Swing voter"
