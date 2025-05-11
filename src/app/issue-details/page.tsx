@@ -7,8 +7,7 @@ import { Representative, getRepresentativesByAddress } from '@/services/represen
 
 export default function IssueDetailsPage() {
   const router = useRouter();
-  const DEFAULT_DEMAND = 'Do a better job';
-  const [demands, setDemands] = useState<string[]>([DEFAULT_DEMAND]);
+  const [demands, setDemands] = useState<string[]>([]);
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set());
@@ -30,53 +29,62 @@ export default function IssueDetailsPage() {
       router.push('/'); // Redirect to home page to enter address
       return;
     }
-    
-    setAddress(storedAddress);
-    setNewAddress(storedAddress);
-    
-    // Check if we have draft data from previous visit
+
+    // Check if we have demands data
     const storedDraftData = localStorage.getItem('draftData');
-    if (storedDraftData) {
-      try {
-        const {
-          demands: storedDemands,
-          personalInfo: storedPersonalInfo,
-          selectedReps: storedSelectedReps,
-          selectionSummary: storedSummary,
-          selectionExplanations: storedExplanations
-        } = JSON.parse(storedDraftData);
-        
-        // Restore demands and personal info
-        if (Array.isArray(storedDemands) && storedDemands.length > 0) {
-          setDemands(storedDemands);
-        }
-        
-        if (storedPersonalInfo) {
-          setPersonalInfo(storedPersonalInfo);
-        }
-        
-        // Restore AI selection info if available
-        if (storedSummary) {
-          setSelectionSummary(storedSummary);
-        }
-        
-        if (storedExplanations && typeof storedExplanations === 'object') {
-          setSelectionExplanations(storedExplanations);
-        }
-        
-        // We'll restore selected reps after fetching representatives
-        const selectedRepsSet = new Set(storedSelectedReps || []);
-        
-        // Fetch representatives and then restore selection
-        fetchRepresentatives(storedAddress, selectedRepsSet);
-      } catch (error) {
-        console.error('Error restoring draft data:', error);
-        // Fetch representatives normally if there's an error
-        fetchRepresentatives(storedAddress);
+    if (!storedDraftData) {
+      router.push('/demands'); // Redirect to demands page if no draft data
+      return;
+    }
+
+    try {
+      const parsedData = JSON.parse(storedDraftData);
+
+      // Check if we have valid demands
+      if (!parsedData.demands || !Array.isArray(parsedData.demands) ||
+          !parsedData.demands.some(demand => demand.trim())) {
+        router.push('/demands'); // Redirect to demands page if no valid demands
+        return;
       }
-    } else {
-      // Fetch representatives normally if there's no stored draft data
-      fetchRepresentatives(storedAddress);
+
+      // Set address and continue with the flow
+      setAddress(storedAddress);
+      setNewAddress(storedAddress);
+
+      const {
+        demands: storedDemands,
+        personalInfo: storedPersonalInfo,
+        selectedReps: storedSelectedReps,
+        selectionSummary: storedSummary,
+        selectionExplanations: storedExplanations
+      } = parsedData;
+
+      // Restore demands and personal info
+      if (Array.isArray(storedDemands) && storedDemands.length > 0) {
+        setDemands(storedDemands);
+      }
+
+      if (storedPersonalInfo) {
+        setPersonalInfo(storedPersonalInfo);
+      }
+
+      // Restore AI selection info if available
+      if (storedSummary) {
+        setSelectionSummary(storedSummary);
+      }
+
+      if (storedExplanations && typeof storedExplanations === 'object') {
+        setSelectionExplanations(storedExplanations);
+      }
+
+      // We'll restore selected reps after fetching representatives
+      const selectedRepsSet = new Set(storedSelectedReps || []);
+
+      // Fetch representatives and then restore selection
+      fetchRepresentatives(storedAddress, selectedRepsSet);
+    } catch (error) {
+      console.error('Error restoring draft data:', error);
+      router.push('/demands'); // Redirect to demands page on error
     }
   }, [router]);
   
@@ -216,21 +224,7 @@ export default function IssueDetailsPage() {
     }
   };
 
-  const handleAddDemand = () => {
-    setDemands([...demands, '']);
-  };
-
-  const handleDemandChange = (index: number, value: string) => {
-    const newDemands = [...demands];
-    newDemands[index] = value;
-    setDemands(newDemands);
-  };
-
-  const handleRemoveDemand = (index: number) => {
-    if (demands.length <= 1) return;
-    const newDemands = demands.filter((_, i) => i !== index);
-    setDemands(newDemands);
-  };
+  // No longer need demand handling functions
 
   const toggleRepresentative = (index: number) => {
     // Check if the representative has any contact methods
@@ -350,21 +344,32 @@ export default function IssueDetailsPage() {
     fetchRepresentatives(newAddress);
   };
 
-  const handleClearForm = () => {
+  const handleClearSelections = () => {
     // Ask for confirmation
-    if (confirm("Are you sure you want to clear all entries? This cannot be undone.")) {
-      // Clear demands
-      setDemands(['']);
-      
-      // Clear personal info
-      setPersonalInfo('');
-      
+    if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
       // Clear selected representatives
       setSelectedReps(new Set<number>());
-      
+
       // Clear selection summary and explanations
-      setSelectionSummary('');
+      setSelectionSummary(null);
       setSelectionExplanations({});
+
+      // Update localStorage
+      const draftData = localStorage.getItem('draftData');
+      if (draftData) {
+        try {
+          const parsedData = JSON.parse(draftData);
+          const updatedData = {
+            ...parsedData,
+            selectedReps: [],
+            selectionSummary: null,
+            selectionExplanations: {}
+          };
+          localStorage.setItem('draftData', JSON.stringify(updatedData));
+        } catch (error) {
+          console.error('Error updating draft data:', error);
+        }
+      }
     }
   };
 
@@ -435,6 +440,7 @@ export default function IssueDetailsPage() {
       </header>
       
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-6">Select Your Representatives</h1>
         {/* Address display with change button */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">
           {isEditingAddress ? (
@@ -483,54 +489,25 @@ export default function IssueDetailsPage() {
             </div>
           )}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left column: Demands and Personal Info */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Demands</h2>
-            <div className="space-y-3 mb-6">
+
+        <div className="grid grid-cols-1 gap-8">
+          {/* Your demands summary */}
+          <div className="p-4 bg-blue-50 border border-blue-100 rounded-md mb-4">
+            <h2 className="text-xl font-semibold mb-3">Your Demands</h2>
+            <ul className="list-disc pl-5 space-y-1">
               {demands.map((demand, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={demand}
-                    onChange={(e) => handleDemandChange(index, e.target.value)}
-                    placeholder={`Enter your demand here`}
-                    className="flex-1 p-2 border border-gray-300 rounded-md"
-                  />
-                  <button
-                    onClick={() => handleRemoveDemand(index)}
-                    className="p-2 text-red-500 hover:text-red-700"
-                    disabled={demands.length <= 1}
-                  >
-                    ✕
-                  </button>
-                </div>
+                <li key={index} className="text-gray-800">{demand}</li>
               ))}
-            </div>
-            
+            </ul>
             <button
-              onClick={handleAddDemand}
-              className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
+              onClick={() => router.push('/demands')}
+              className="mt-4 py-2 px-4 border border-blue-300 text-blue-600 rounded-md hover:bg-blue-100 inline-flex items-center"
             >
-              + Add Another Demand
+              <span className="mr-1">✏️</span> Edit Demands
             </button>
-            
-            <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
-            <div className="mb-8">
-              <textarea
-                value={personalInfo}
-                onChange={(e) => setPersonalInfo(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md min-h-[80px]"
-                placeholder="Name, Party Affiliation, Demographic Info, etc."
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                This information will make your email more personal and effective.
-              </p>
-            </div>
           </div>
-          
-          {/* Right column: Representatives */}
+
+          {/* Representatives */}
           <div>
             <div className="flex flex-col space-y-2 mb-4">
               <div className="flex justify-between items-center">
@@ -914,21 +891,21 @@ export default function IssueDetailsPage() {
         
         {/* Action Buttons */}
         <div className="mt-8 mb-4 flex gap-4">
-          {/* Clear Form Button */}
+          {/* Clear Selections Button */}
           <button
-            onClick={handleClearForm}
+            onClick={handleClearSelections}
             className="py-3 px-6 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
           >
-            Clear Form
+            Clear Selections
           </button>
-          
+
           {/* Draft Generation Button */}
           <button
             onClick={handleGenerateDraft}
             disabled={
-              isDraftLoading || 
-              representatives.length === 0 || 
-              selectedReps.size === 0 || 
+              isDraftLoading ||
+              representatives.length === 0 ||
+              selectedReps.size === 0 ||
               demands.filter(d => d.trim()).length === 0
             }
             className="flex-1 py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"

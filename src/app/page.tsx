@@ -87,14 +87,14 @@ export default function Home() {
   // Helper function to handle address submission
   const submitAddress = (addressToSubmit: string) => {
     if (!addressToSubmit) return;
-    
+
     setIsLoading(true);
-    
+
     // Store address in localStorage for use in the next page
     localStorage.setItem('userAddress', addressToSubmit);
-    
-    // Navigate to the next page
-    router.push('/issue-details');
+
+    // Navigate to the demands page first
+    router.push('/demands');
   };
 
   // We'll define a state variable to track if we're in the middle of selecting

@@ -293,7 +293,7 @@ export default function DraftPreviewPage() {
             onClick={() => router.push('/issue-details')}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
-            <span className="mr-2">←</span> Back to Demands
+            <span className="mr-2">←</span> Back to Representatives
           </button>
         </div>
         
@@ -434,7 +434,7 @@ export default function DraftPreviewPage() {
             onClick={() => router.push('/issue-details')}
             className="py-3 px-6 border border-gray-300 rounded-md hover:bg-gray-100"
           >
-            Edit Demands
+            Back to Representatives
           </button>
           
           <button
