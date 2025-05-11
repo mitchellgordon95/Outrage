@@ -127,7 +127,7 @@ export default function DemandsPage() {
             Feel free to be informal and direct - short, passionate statements often work best!
           </p>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-3 mb-2">
             {demands.length > 0 ? (
               demands.map((demand, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -152,6 +152,14 @@ export default function DemandsPage() {
               </div>
             )}
           </div>
+
+          {/* Add Custom Demand button */}
+          <button
+            onClick={handleAddDemand}
+            className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
+          >
+            + Add Custom Demand
+          </button>
 
           {/* Economy Category */}
           <IssueCategory
@@ -297,19 +305,7 @@ export default function DemandsPage() {
             onIssueClick={addIssue}
           />
 
-          {/* Custom demands section */}
-          <div className="mb-6">
-            <h3 className="font-medium text-gray-700 mb-2">Add Your Own</h3>
-            <p className="text-sm text-gray-500 mb-3">
-              Have a specific issue not listed above? Add it here.
-            </p>
-            <button
-              onClick={handleAddDemand}
-              className="py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
-            >
-              + Add Custom Demand
-            </button>
-          </div>
+          {/* Custom demands section removed */}
         </div>
         
         {/* Navigation progress */}
