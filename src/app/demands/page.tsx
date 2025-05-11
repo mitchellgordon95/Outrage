@@ -111,11 +111,37 @@ export default function DemandsPage() {
         </div>
         
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">What Do You Want Your Representatives to Do?</h2>
+          <h2 className="text-xl font-semibold mb-4">What Do You Care About?</h2>
           <p className="text-gray-600 mb-6">
             Enter specific demands or issues you want your elected officials to address.
             Feel free to be informal and direct - short, passionate statements often work best!
           </p>
+
+          <div className="space-y-3 mb-6">
+            {demands.length > 0 ? (
+              demands.map((demand, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={demand}
+                    onChange={(e) => handleDemandChange(index, e.target.value)}
+                    placeholder={`Enter your demand here`}
+                    className="flex-1 p-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    onClick={() => handleRemoveDemand(index)}
+                    className="p-2 text-red-500 hover:text-red-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
+                <p className="text-gray-500">No demands added yet. Click an issue below or use the "Add Demand" button.</p>
+              </div>
+            )}
+          </div>
 
           <div className="mb-4">
             <h3 className="font-medium text-gray-700 mb-1 text-sm">Common Issues (Click to Add)</h3>
@@ -141,32 +167,6 @@ export default function DemandsPage() {
                 </button>
               ))}
             </div>
-          </div>
-          
-          <div className="space-y-3 mb-6">
-            {demands.length > 0 ? (
-              demands.map((demand, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={demand}
-                    onChange={(e) => handleDemandChange(index, e.target.value)}
-                    placeholder={`Enter your demand here`}
-                    className="flex-1 p-2 border border-gray-300 rounded-md"
-                  />
-                  <button
-                    onClick={() => handleRemoveDemand(index)}
-                    className="p-2 text-red-500 hover:text-red-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
-                <p className="text-gray-500">No demands added yet. Click an issue above or use the "Add Demand" button below.</p>
-              </div>
-            )}
           </div>
           
           <button
