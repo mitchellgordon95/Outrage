@@ -375,7 +375,8 @@ export default function PersonalInfoPage() {
                 "I've voted in this district for 5+ years",
                 "I've voted in this district for 10+ years",
                 "I've voted in this district for 20+ years",
-                "First-time voter"
+                "First-time voter",
+                "Haven't voted in a while"
               ].map((item, index) => (
                 <button
                   key={`voting-${index}`}
@@ -475,9 +476,7 @@ export default function PersonalInfoPage() {
             </button>
           </div>
 
-          <p className="text-sm text-gray-500 mt-2">
-            This information is optional but strongly recommended for a more personal and effective message.
-          </p>
+          {/* Removed recommendation text */}
         </div>
         
         {/* Action Buttons */}
