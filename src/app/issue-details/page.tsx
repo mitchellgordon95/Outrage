@@ -516,9 +516,9 @@ export default function IssueDetailsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          {/* Your demands summary */}
+          {/* What Do You Care About section */}
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md mb-4">
-            <h2 className="text-xl font-semibold mb-3">Your Demands</h2>
+            <h2 className="text-xl font-semibold mb-3">What Do You Care About?</h2>
             <ul className="list-disc pl-5 space-y-1">
               {demands.map((demand, index) => (
                 <li key={index} className="text-gray-800">{demand}</li>
@@ -539,22 +539,12 @@ export default function IssueDetailsPage() {
                 <div>
                   <h2 className="text-xl font-semibold">Your Representatives</h2>
                 </div>
-                
-                <div className="flex items-center">
-                  {/* Help Tooltip */}
-                  <div className="relative mr-2 group">
-                    <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded-full border border-gray-300 cursor-help text-gray-500 hover:bg-gray-200">
-                      <span>?</span>
-                    </div>
-                    <div className="absolute z-10 right-0 transform translate-y-2 w-64 px-4 py-3 bg-white rounded shadow-lg invisible group-hover:visible border border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        AI will analyze your demands and automatically select the most relevant representatives based on their jurisdiction and responsibilities.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Pick for Me button */}
-                  {!isLoading && representatives.length > 0 && (
+              </div>
+              
+              {/* Pick Based on My Demands button */}
+              <div className="flex mb-2">
+                {!isLoading && representatives.length > 0 && (
+                  <div className="flex items-center">
                     <button
                       onClick={handlePickForMe}
                       disabled={
@@ -562,59 +552,179 @@ export default function IssueDetailsPage() {
                         demands.filter(d => d.trim()).length === 0 ||
                         representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
                       }
-                      className="px-3 py-1.5 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      className="px-2 py-1 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
-                      {isAiSelecting ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          <span>Selecting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                          </svg>
-                          <span>Pick for Me</span>
-                        </>
-                      )}
+                    {isAiSelecting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Selecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span>Pick Based on My Demands</span>
+                      </>
+                    )}
                     </button>
-                  )}
-                </div>
+                    {/* Help Tooltip */}
+                    <div className="relative ml-1 group">
+                      <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded-full border border-gray-300 cursor-help text-gray-500 hover:bg-gray-200">
+                        <span>?</span>
+                      </div>
+                      <div className="absolute z-10 right-0 transform translate-y-2 w-64 px-4 py-3 bg-white rounded shadow-lg invisible group-hover:visible border border-gray-200">
+                        <p className="text-sm text-gray-600">
+                          AI will analyze your demands and automatically select the most relevant representatives based on their jurisdiction and responsibilities.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              {/* Selection controls */}
-              {!isLoading && representatives.length > 0 && (
-                <div className="flex space-x-2 text-sm">
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
-                  >
-                    Select All ({representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length})
-                  </button>
-                  {selectedReps.size > 0 && (
-                    <button
-                      onClick={handleUnselectAll}
-                      className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      Unselect All
-                    </button>
-                  )}
-                  {selectedReps.size > 0 && (
-                    <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
-                      {selectedReps.size} selected
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
             
             {/* Selection Summary - Compact version at the top */}
             {!isLoading && selectionSummary && !apiError && (
               <div className="mb-3 py-2 px-3 bg-blue-50 border border-blue-200 rounded-md">
                 <p className="text-sm text-blue-700">{selectionSummary}</p>
+              </div>
+            )}
+            
+            {/* Selected Representatives Section - Fixed position */}
+            {!isLoading && selectedReps.size > 0 && !apiError && (
+              <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
+                <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
+                {/* Move just Unselect All and count here */}
+                {selectedReps.size > 0 && (
+                  <div className="flex space-x-2 text-sm mb-3">
+                    <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
+                      {selectedReps.size} selected
+                    </span>
+                    <button
+                      onClick={handleUnselectAll}
+                      className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Unselect All
+                    </button>
+                  </div>
+                )}
+                <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-1">
+                  {Array.from(selectedReps).sort((a, b) => {
+                    // Sort by contact availability
+                    const aRep = representatives[a];
+                    const bRep = representatives[b];
+                    if (!aRep || !bRep) return 0;
+                    
+                    const aHasContacts = aRep.contacts && aRep.contacts.length > 0;
+                    const bHasContacts = bRep.contacts && bRep.contacts.length > 0;
+                    
+                    if (aHasContacts && !bHasContacts) return -1; // a comes first
+                    if (!aHasContacts && bHasContacts) return 1;  // b comes first
+                    return 0; // keep original order
+                  }).map(index => {
+                    const rep = representatives[index];
+                    if (!rep) return null;
+                    
+                    return (
+                      <div key={`selected-fixed-${index}`} className="p-2 bg-white border border-primary rounded-md">
+                        <div className="flex items-start">
+                          <input
+                            type="checkbox"
+                            id={`selected-fixed-rep-${index}`}
+                            checked={true}
+                            onChange={() => toggleRepresentative(index)}
+                            className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
+                          />
+                          <div className="mr-2 flex-shrink-0">
+                            {rep.photoUrl ? (
+                              <img 
+                                src={rep.photoUrl} 
+                                alt={`Photo of ${rep.name}`}
+                                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                onError={(e) => {
+                                  // Replace broken images with placeholder
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null; // Prevent infinite loop
+                                  target.parentElement!.innerHTML = `
+                                    <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                      ${rep.name.charAt(0)}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                {rep.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-medium text-primary truncate">{rep.name}</h3>
+                              {rep.party && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
+                                  rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
+                                  rep.party.toLowerCase().includes('republican') ? 'bg-red-100 text-red-800' : 
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {rep.party}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">{rep.office}</p>
+                            
+                            {/* Display tooltip with AI explanation if available */}
+                            {selectionExplanations && rep.id && selectionExplanations[rep.id] && (
+                              <div className="mt-1 group relative">
+                                <div className="flex items-center">
+                                  <span className="text-xs py-0.5 px-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-full inline-flex items-center cursor-help">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Why selected
+                                  </span>
+                                </div>
+                                <div className="absolute z-10 left-0 transform translate-y-1 w-64 px-3 py-2 bg-white rounded shadow-lg invisible group-hover:visible border border-blue-100">
+                                  <p className="text-xs text-blue-700">{selectionExplanations[rep.id]}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Display contact methods */}
+                            {rep.contacts && rep.contacts.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {rep.contacts.map((contact, contactIndex) => (
+                                  <span 
+                                    key={contactIndex}
+                                    className={`text-xs px-2 py-0.5 rounded-full ${
+                                      contact.type === 'email' ? 'bg-green-50 text-green-700 border border-green-200' : 
+                                      contact.type === 'webform' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                      contact.type === 'facebook' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                      contact.type === 'twitter' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                                      contact.type === 'instagram' ? 'bg-pink-50 text-pink-700 border border-pink-200' :
+                                      'bg-gray-50 text-gray-700 border border-gray-200'
+                                    }`}
+                                  >
+                                    {contact.type === 'email' ? '✉️' : 
+                                     contact.type === 'webform' ? '🌐' : 
+                                     contact.type === 'facebook' ? '📘' :
+                                     contact.type === 'twitter' ? '🐦' :
+                                     contact.type === 'instagram' ? '📸' :
+                                     '📞'} {contact.description || contact.type}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
             
@@ -658,125 +768,15 @@ export default function IssueDetailsPage() {
               </div>
             ) : (
               <div className="max-h-[600px] overflow-y-auto pr-2">
-                {/* Selected Representatives Section */}
-                {selectedReps.size > 0 && (
-                  <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
-                    <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
-                    <div className="grid gap-2">
-                      {Array.from(selectedReps).sort((a, b) => {
-                        // Sort by contact availability
-                        const aRep = representatives[a];
-                        const bRep = representatives[b];
-                        if (!aRep || !bRep) return 0;
-                        
-                        const aHasContacts = aRep.contacts && aRep.contacts.length > 0;
-                        const bHasContacts = bRep.contacts && bRep.contacts.length > 0;
-                        
-                        if (aHasContacts && !bHasContacts) return -1; // a comes first
-                        if (!aHasContacts && bHasContacts) return 1;  // b comes first
-                        return 0; // keep original order
-                      }).map(index => {
-                        const rep = representatives[index];
-                        if (!rep) return null;
-                        
-                        return (
-                          <div key={`selected-${index}`} className="p-2 bg-white border border-primary rounded-md">
-                            <div className="flex items-start">
-                              <input
-                                type="checkbox"
-                                id={`selected-rep-${index}`}
-                                checked={true}
-                                onChange={() => toggleRepresentative(index)}
-                                className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
-                              />
-                              <div className="mr-2 flex-shrink-0">
-                                {rep.photoUrl ? (
-                                  <img 
-                                    src={rep.photoUrl} 
-                                    alt={`Photo of ${rep.name}`}
-                                    className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                    onError={(e) => {
-                                      // Replace broken images with placeholder
-                                      const target = e.target as HTMLImageElement;
-                                      target.onerror = null; // Prevent infinite loop
-                                      target.parentElement!.innerHTML = `
-                                        <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
-                                          ${rep.name.charAt(0)}
-                                        </div>
-                                      `;
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium">
-                                    {rep.name.charAt(0)}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start">
-                                  <h3 className="font-medium text-primary truncate">{rep.name}</h3>
-                                  {rep.party && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
-                                      rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
-                                      rep.party.toLowerCase().includes('republican') ? 'bg-red-100 text-red-800' : 
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {rep.party}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500">{rep.office}</p>
-                                
-                                {/* Display tooltip with AI explanation if available */}
-                                {selectionExplanations && rep.id && selectionExplanations[rep.id] && (
-                                  <div className="mt-1 group relative">
-                                    <div className="flex items-center">
-                                      <span className="text-xs py-0.5 px-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-full inline-flex items-center cursor-help">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Why selected
-                                      </span>
-                                    </div>
-                                    <div className="absolute z-10 left-0 transform translate-y-1 w-64 px-3 py-2 bg-white rounded shadow-lg invisible group-hover:visible border border-blue-100">
-                                      <p className="text-xs text-blue-700">{selectionExplanations[rep.id]}</p>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Display contact methods */}
-                                {rep.contacts && rep.contacts.length > 0 && (
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {rep.contacts.map((contact, contactIndex) => (
-                                      <span 
-                                        key={contactIndex}
-                                        className={`text-xs px-2 py-0.5 rounded-full ${
-                                          contact.type === 'email' ? 'bg-green-50 text-green-700 border border-green-200' : 
-                                          contact.type === 'webform' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                                          contact.type === 'facebook' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                          contact.type === 'twitter' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
-                                          contact.type === 'instagram' ? 'bg-pink-50 text-pink-700 border border-pink-200' :
-                                          'bg-gray-50 text-gray-700 border border-gray-200'
-                                        }`}
-                                      >
-                                        {contact.type === 'email' ? '✉️' : 
-                                         contact.type === 'webform' ? '🌐' : 
-                                         contact.type === 'facebook' ? '📘' :
-                                         contact.type === 'twitter' ? '🐦' :
-                                         contact.type === 'instagram' ? '📸' :
-                                         '📞'} {contact.description || contact.type}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {/* Selection controls */}
+                <div className="flex space-x-2 text-sm mb-3">
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
+                  >
+                    Select All ({representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length})
+                  </button>
+                </div>
                 
                 {/* Group and display all representatives by level */}
                 {['local', 'state', 'country'].map(level => {
