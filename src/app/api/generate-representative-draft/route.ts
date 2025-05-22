@@ -11,6 +11,8 @@ interface RequestBody {
     office: string;
     contacts?: Contact[];
   };
+  workingDraft?: string;
+  feedback?: string;
 }
 
 interface DraftResponse {
@@ -50,7 +52,7 @@ function validateRequest(body: RequestBody): boolean {
 
 // Generate the draft using Anthropic API
 async function generateDraft(body: RequestBody): Promise<DraftResponse | null> {
-  const { demands, personalInfo, recipient } = body;
+  const { demands, personalInfo, recipient, workingDraft, feedback } = body;
   
   // Check if we have an API key
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -62,46 +64,51 @@ async function generateDraft(body: RequestBody): Promise<DraftResponse | null> {
   // Use Anthropic API
   const anthropic = new Anthropic({ apiKey });
   
-  // Format demands as a numbered list
-  const demandsText = demands
-    .filter(demand => demand.trim())
-    .map((demand, index) => `${index + 1}. ${demand}`)
-    .join('\n');
-  
-  // Format contact information if available
-  let contactInfo = '';
-  if (recipient.contacts && recipient.contacts.length > 0) {
-    const emailContacts = recipient.contacts.filter(c => c.type === 'email').map(c => c.value);
-    const webformContacts = recipient.contacts.filter(c => c.type === 'webform').map(c => c.value);
+  let prompt;
+  if (workingDraft && feedback) {
+    prompt = `Please revise the following draft email based on the provided feedback:
+
+Original Draft:
+${workingDraft}
+
+Feedback:
+${feedback}
+
+Important guidelines:
+- The email should be direct and assertive
+- Make the subject line relevant to the first demand
+- Do NOT include any placeholders like [Your Name] or [Your Address]
+- If personal info is provided, use it to personalize the email
+- If no personal info is provided, sign as "A Concerned Constituent"
+- Do not include fields for the user to fill in manually
+- If this is using a web form rather than email, make sure the text is still appropriate
+
+Format your response in plain text like this:
+Subject: [subject line here]
+Message:
+[message content here]`;
+  } else {
+    // Format demands as a numbered list
+    const demandsText = demands
+      .filter(demand => demand.trim())
+      .map((demand, index) => `${index + 1}. ${demand}`)
+      .join('\n');
     
-    if (emailContacts.length > 0) {
-      contactInfo += `\nEmail: ${emailContacts.join(', ')}`;
+    // Format contact information if available
+    let contactInfo = '';
+    if (recipient.contacts && recipient.contacts.length > 0) {
+      const emailContacts = recipient.contacts.filter(c => c.type === 'email').map(c => c.value);
+      const webformContacts = recipient.contacts.filter(c => c.type === 'webform').map(c => c.value);
+      
+      if (emailContacts.length > 0) {
+        contactInfo += `\nEmail: ${emailContacts.join(', ')}`;
+      }
+      
+      if (webformContacts.length > 0) {
+        contactInfo += `\nWeb Form: ${webformContacts.join(', ')}`;
+      }
     }
-    
-    if (webformContacts.length > 0) {
-      contactInfo += `\nWeb Form: ${webformContacts.join(', ')}`;
-    }
-  }
-  
-  console.log('Calling Anthropic API with:', {
-    model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
-    recipient: {
-      name: recipient.name,
-      office: recipient.office,
-      contactsCount: recipient.contacts?.length || 0
-    },
-    demandsCount: demands.length,
-    personalInfo: personalInfo || '(none provided)'
-  });
-  
-  const response = await anthropic.messages.create({
-    model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
-    max_tokens: 1000,
-    system: "You are an assistant that drafts effective emails to elected representatives.",
-    messages: [
-      {
-        role: "user",
-        content: `Write an email to my elected representative with the following information:
+    prompt = `Write an email to my elected representative with the following information:
 
 Representative: ${recipient.name}
 Position: ${recipient.office}${contactInfo}
@@ -121,7 +128,28 @@ Important guidelines:
 Format your response in plain text like this:
 Subject: [subject line here]
 Message:
-[message content here]`
+[message content here]`;
+  }
+  
+  console.log('Calling Anthropic API with:', {
+    model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
+    recipient: {
+      name: recipient.name,
+      office: recipient.office,
+      contactsCount: recipient.contacts?.length || 0
+    },
+    demandsCount: demands.length,
+    personalInfo: personalInfo || '(none provided)'
+  });
+  
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
+    max_tokens: 1000,
+    system: "You are an assistant that drafts and revises effective emails to elected representatives.",
+    messages: [
+      {
+        role: "user",
+        content: prompt
       }
     ],
     temperature: 0.7,
@@ -209,7 +237,8 @@ export async function POST(request: NextRequest) {
     
     // Generate draft
     try {
-      const draft = await generateDraft(requestBody);
+      const { workingDraft, feedback } = requestBody;
+      const draft = await generateDraft({ ...requestBody, workingDraft, feedback });
       if (!draft) {
         return errorResponse('Failed to generate draft');
       }
