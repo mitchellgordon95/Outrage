@@ -467,20 +467,35 @@ export default function DraftPreviewPage() {
                         />
                         <button
                           onClick={() => {
-                            if (selectedRepIndex !== null && currentDraft) {
+                            if (selectedRepIndex !== null && currentDraft && feedbackText.trim()) {
                               const rep = representatives[selectedRepIndex];
+                              const draftToRevise = drafts.get(selectedRepIndex);
+
+                              if (draftToRevise) {
+                                // Set current draft to loading immediately for UI responsiveness
+                                setDrafts(prev => {
+                                  const newDrafts = new Map(prev);
+                                  newDrafts.set(selectedRepIndex, { 
+                                    subject: draftToRevise.subject, // Keep current subject
+                                    content: draftToRevise.content, // Keep current content
+                                    status: 'loading' 
+                                  });
+                                  return newDrafts;
+                                });
+                              }
+                              
                               generateDraftForRepresentativeWithDemands(
                                 rep,
                                 selectedRepIndex,
                                 demands,
                                 personalInfo,
-                                currentDraft.content,
+                                currentDraft.content, // Pass original content as workingDraft
                                 feedbackText
                               );
                               setFeedbackText(''); // Clear feedback text after submission
                             }
                           }}
-                          disabled={!feedbackText.trim() || currentDraft.status === 'loading'}
+                          disabled={!feedbackText.trim()} // Corrected: removed redundant currentDraft.status check
                           className="mt-2 px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
                         >
                           Revise Draft
