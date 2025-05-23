@@ -22,6 +22,7 @@ export default function DraftPreviewPage() {
   const [drafts, setDrafts] = useState<Map<number, RepresentativeDraft>>(new Map());
   const [selectedRepIndex, setSelectedRepIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [feedbackText, setFeedbackText] = useState('');
 
   useEffect(() => {
     // Check for address
@@ -119,13 +120,19 @@ export default function DraftPreviewPage() {
 
   // Generate draft for a specific representative
   const generateDraftForRepresentativeWithDemands = async (
-    representative: Representative, 
+    representative: Representative,
     index: number,
     demandsList: string[],
-    personalInfoData: string
+    personalInfoData: string,
+    workingDraft?: string,
+    feedback?: string
   ) => {
     try {
-      console.log(`Generating draft for ${representative.name} (index: ${index})`);
+      console.log(
+        `Generating${workingDraft && feedback ? ' revised' : ''} draft for ${
+          representative.name
+        } (index: ${index})`
+      );
       console.log('Using demands:', demandsList);
       
       // Validate the demands parameter
@@ -136,11 +143,16 @@ export default function DraftPreviewPage() {
       
       console.log('Sending personal info to API:', personalInfoData);
       
-      const requestBody = {
+      const requestBody: any = {
         demands: demandsList,
-        personalInfo: personalInfoData, // Use the personal info passed as parameter
-        recipient: representative
+        personalInfo: personalInfoData,
+        recipient: representative,
       };
+
+      if (workingDraft && feedback) {
+        requestBody.workingDraft = workingDraft;
+        requestBody.feedback = feedback;
+      }
       
       console.log('Full request body:', JSON.stringify(requestBody));
       
@@ -465,6 +477,52 @@ export default function DraftPreviewPage() {
                         {currentDraft.content}
                       </div>
                     </div>
+                    {currentDraft.status === 'complete' && (
+                      <div className="mt-4">
+                        <h2 className="text-lg font-semibold mb-2">Feedback</h2>
+                        <textarea
+                          value={feedbackText}
+                          onChange={(e) => setFeedbackText(e.target.value)}
+                          placeholder="Enter your feedback here..."
+                          className="w-full p-2 border border-gray-300 rounded-md min-h-[100px]"
+                        />
+                        <button
+                          onClick={() => {
+                            if (selectedRepIndex !== null && currentDraft && feedbackText.trim()) {
+                              const rep = representatives[selectedRepIndex];
+                              const draftToRevise = drafts.get(selectedRepIndex);
+
+                              if (draftToRevise) {
+                                // Set current draft to loading immediately for UI responsiveness
+                                setDrafts(prev => {
+                                  const newDrafts = new Map(prev);
+                                  newDrafts.set(selectedRepIndex, { 
+                                    subject: draftToRevise.subject, // Keep current subject
+                                    content: draftToRevise.content, // Keep current content
+                                    status: 'loading' 
+                                  });
+                                  return newDrafts;
+                                });
+                              }
+                              
+                              generateDraftForRepresentativeWithDemands(
+                                rep,
+                                selectedRepIndex,
+                                demands,
+                                personalInfo,
+                                currentDraft.content, // Pass original content as workingDraft
+                                feedbackText
+                              );
+                              setFeedbackText(''); // Clear feedback text after submission
+                            }
+                          }}
+                          disabled={!feedbackText.trim()} // Corrected: removed redundant currentDraft.status check
+                          className="mt-2 px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
+                        >
+                          Revise Draft
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
