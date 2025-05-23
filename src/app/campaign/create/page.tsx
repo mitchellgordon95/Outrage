@@ -24,14 +24,22 @@ export default function CreateCampaignPage() {
       router.replace('/demands');
       return;
     }
-    if (!draftData.selectedReps || draftData.selectedReps.length === 0) {
-      alert('No representatives selected. Please select representatives first.');
+    // Check for the actual Representative objects
+    if (!draftData.representatives || !Array.isArray(draftData.representatives) || draftData.representatives.length === 0) {
+      alert('No representative data found. Please select representatives first.');
       router.replace('/issue-details'); // Or where reps are selected
       return;
     }
+    // Also ensure selectedReps (IDs) are present if your logic relies on them elsewhere,
+    // though for this page, draftData.representatives are primary.
+    if (!draftData.selectedReps || draftData.selectedReps.length === 0) {
+        alert('No representative selections found. Please select representatives first.');
+        router.replace('/issue-details');
+        return;
+    }
 
     setDemands(draftData.demands.filter(d => d && d.trim())); // Ensure valid demands
-    setRepresentatives(draftData.selectedReps);
+    setRepresentatives(draftData.representatives || []); // Use draftData.representatives
     setLocalStorageLoaded(true);
   }, [router]);
 
