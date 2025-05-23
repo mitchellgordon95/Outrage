@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Added for potential campaign links
 import { parseDraftData, hasSubstantialProgress } from '@/utils/navigation';
 
 // Import from our custom type definition
@@ -15,6 +16,20 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+
+  // Campaign state variables
+  interface Campaign {
+    id: number;
+    title: string;
+    description: string | null; // Description can be null
+    message_sent_count: number;
+    created_at: string; // Assuming string representation from API
+    demands: any[]; // Define more specifically if structure is known
+    representatives: any[]; // Define more specifically if structure is known
+  }
+  const [popularCampaigns, setPopularCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+  const [campaignsError, setCampaignsError] = useState<string | null>(null);
   
   useEffect(() => {
     // Check if the API key is available
@@ -46,6 +61,30 @@ export default function Home() {
         document.head.removeChild(script);
       }
     };
+  }, []);
+
+  // useEffect for fetching popular campaigns
+  useEffect(() => {
+    const fetchPopularCampaigns = async () => {
+      setCampaignsLoading(true);
+      setCampaignsError(null);
+      try {
+        const response = await fetch('/api/campaigns?sortBy=message_sent_count&order=DESC&limit=5');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch campaigns: ${response.status}`);
+        }
+        const data: Campaign[] = await response.json();
+        setPopularCampaigns(data);
+      } catch (error) {
+        console.error("Error fetching popular campaigns:", error);
+        setCampaignsError("Failed to load campaigns.");
+        setPopularCampaigns([]);
+      } finally {
+        setCampaignsLoading(false);
+      }
+    };
+
+    fetchPopularCampaigns();
   }, []);
 
   const initAutocomplete = () => {
@@ -247,6 +286,54 @@ export default function Home() {
         </div>
         
       </div>
+
+      {/* Popular Campaigns Section */}
+      <section className="w-full max-w-4xl mt-16 px-4">
+        <h2 className="text-3xl font-semibold text-gray-800 mb-8 text-center">
+          Popular Campaigns
+        </h2>
+        {campaignsLoading ? (
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-gray-300 border-t-primary rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-gray-600">Loading campaigns...</p>
+          </div>
+        ) : campaignsError ? (
+          <div className="text-center text-red-500 bg-red-50 p-4 rounded-md border border-red-200">
+            <p>{campaignsError}</p>
+          </div>
+        ) : popularCampaigns.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {popularCampaigns.map((campaign) => (
+              <div key={campaign.id} className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-2 truncate" title={campaign.title}>
+                    {campaign.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-3" title={campaign.description || ''}>
+                    {campaign.description || 'No description provided.'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">
+                    Created: {new Date(campaign.created_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-md font-semibold text-gray-700">
+                    Messages Sent: {campaign.message_sent_count}
+                  </p>
+                  {/* Optional: Link to campaign detail page */}
+                  {/* <Link href={`/campaign/${campaign.id}`} className="text-primary hover:underline mt-2 inline-block">
+                    View Details
+                  </Link> */}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 bg-gray-50 p-4 rounded-md border border-gray-200">
+            <p>No campaigns found yet. Be the first to start one!</p>
+          </div>
+        )}
+      </section>
     </main>
   );
 }

@@ -215,7 +215,9 @@ export default function DraftPreviewPage() {
     type: string;
   }
 
-  const handleSendMessages = () => {
+  const handleSendMessages = async () => { // Made async
+    const campaignId = localStorage.getItem('activeCampaignId');
+
     // Create an array of links to open to avoid popup blocking
     const linksToOpen: LinkToOpen[] = [];
     
@@ -264,6 +266,25 @@ export default function DraftPreviewPage() {
       `\nYour browser may block popups. Please allow popups for this site.`;
     
     if (confirm(confirmMessage)) {
+      // Increment campaign counter if activeCampaignId exists
+      if (campaignId) {
+        localStorage.removeItem('activeCampaignId'); // Remove immediately
+        try {
+          const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
+          if (!incrementResponse.ok) {
+            const errorData = await incrementResponse.json();
+            console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
+            // Optionally, inform user if critical, but likely silent failure is okay
+            // alert(`Note: Could not update campaign statistics for campaign ${campaignId}. Your messages are still being prepared.`);
+          } else {
+            console.log(`Campaign ${campaignId} count incremented successfully.`);
+          }
+        } catch (err) {
+          console.error('Error during campaign increment fetch:', err);
+          // alert(`Note: An error occurred while updating campaign statistics. Your messages are still being prepared.`);
+        }
+      }
+
       // Open each link with a slight delay to avoid popup blockers
       linksToOpen.forEach((link: LinkToOpen, i: number) => {
         setTimeout(() => {
@@ -462,18 +483,30 @@ export default function DraftPreviewPage() {
           >
             Back to Personal Info
           </button>
-          
-          <button
-            onClick={handleSendMessages}
-            className="py-3 px-6 bg-primary text-white rounded-md hover:bg-opacity-90"
-            disabled={
-              Array.from(drafts.values()).every(
-                draft => draft.status !== 'complete'
-              )
-            }
-          >
-            Send Messages
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => router.push('/campaign/create')}
+              className="py-3 px-6 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              disabled={
+                Array.from(drafts.values()).every(
+                  draft => draft.status !== 'complete'
+                )
+              }
+            >
+              Create a Campaign
+            </button>
+            <button
+              onClick={handleSendMessages}
+              className="py-3 px-6 bg-primary text-white rounded-md hover:bg-opacity-90 disabled:opacity-50"
+              disabled={
+                Array.from(drafts.values()).every(
+                  draft => draft.status !== 'complete'
+                )
+              }
+            >
+              Send Messages
+            </button>
+          </div>
         </div>
       </div>
     </main>
