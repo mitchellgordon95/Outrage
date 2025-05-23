@@ -21,7 +21,8 @@ export async function POST(request: Request, { params }: { params: { campaignId:
     // Create a new Pool instance
     // Ensure POSTGRES_URL is set in your environment variables
     const pool = new Pool({
-      connectionString: process.env.POSTGRES_URL,
+      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     });
 
     client = await pool.connect();

@@ -268,7 +268,7 @@ export default function PersonalInfoPage() {
         {/* Summary of demands and representatives */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h2 className="font-semibold mb-2">Your Demands</h2>
+            <h2 className="font-semibold mb-2">What Do You Care About?</h2>
             <ul className="list-disc pl-5 space-y-1">
               {demands.map((demand, index) => (
                 <li key={index} className="text-gray-800 text-sm">{demand}</li>
