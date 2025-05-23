@@ -311,6 +311,42 @@ export default function DraftPreviewPage() {
     return drafts.get(selectedRepIndex) || null;
   };
 
+  const handleReviseAll = async () => {
+    if (!feedbackText.trim()) return; // Should be disabled, but as a safeguard
+
+    const feedback = feedbackText.trim();
+    let revisionsStarted = false;
+
+    drafts.forEach((draft, index) => {
+      if (draft.status === 'complete') {
+        revisionsStarted = true;
+        // Immediately update status to 'loading' for this draft
+        setDrafts(prev => {
+          const newDrafts = new Map(prev);
+          const current = newDrafts.get(index);
+          if (current) {
+            newDrafts.set(index, { ...current, status: 'loading' });
+          }
+          return newDrafts;
+        });
+
+        // Call generation function
+        generateDraftForRepresentativeWithDemands(
+          representatives[index],
+          index,
+          demands,
+          personalInfo,
+          draft.content, // workingDraft
+          feedback       // feedback
+        );
+      }
+    });
+
+    if (revisionsStarted) {
+      setFeedbackText(''); // Clear feedback text after starting revisions
+    }
+  };
+
   const currentDraft = getSelectedDraft();
 
   return (
@@ -486,41 +522,53 @@ export default function DraftPreviewPage() {
                           placeholder="Enter your feedback here..."
                           className="w-full p-2 border border-gray-300 rounded-md min-h-[100px]"
                         />
-                        <button
-                          onClick={() => {
-                            if (selectedRepIndex !== null && currentDraft && feedbackText.trim()) {
-                              const rep = representatives[selectedRepIndex];
-                              const draftToRevise = drafts.get(selectedRepIndex);
+                        <div className="flex space-x-2 mt-2">
+                          <button
+                            onClick={() => {
+                              if (selectedRepIndex !== null && currentDraft && feedbackText.trim()) {
+                                const rep = representatives[selectedRepIndex];
+                                const draftToRevise = drafts.get(selectedRepIndex);
 
-                              if (draftToRevise) {
-                                // Set current draft to loading immediately for UI responsiveness
-                                setDrafts(prev => {
-                                  const newDrafts = new Map(prev);
-                                  newDrafts.set(selectedRepIndex, { 
-                                    subject: draftToRevise.subject, // Keep current subject
-                                    content: draftToRevise.content, // Keep current content
-                                    status: 'loading' 
+                                if (draftToRevise) {
+                                  // Set current draft to loading immediately for UI responsiveness
+                                  setDrafts(prev => {
+                                    const newDrafts = new Map(prev);
+                                    newDrafts.set(selectedRepIndex, {
+                                      subject: draftToRevise.subject, // Keep current subject
+                                      content: draftToRevise.content, // Keep current content
+                                      status: 'loading'
+                                    });
+                                    return newDrafts;
                                   });
-                                  return newDrafts;
-                                });
+                                }
+
+                                generateDraftForRepresentativeWithDemands(
+                                  rep,
+                                  selectedRepIndex,
+                                  demands,
+                                  personalInfo,
+                                  currentDraft.content, // Pass original content as workingDraft
+                                  feedbackText
+                                );
+                                setFeedbackText(''); // Clear feedback text after submission
                               }
-                              
-                              generateDraftForRepresentativeWithDemands(
-                                rep,
-                                selectedRepIndex,
-                                demands,
-                                personalInfo,
-                                currentDraft.content, // Pass original content as workingDraft
-                                feedbackText
-                              );
-                              setFeedbackText(''); // Clear feedback text after submission
+                            }}
+                            disabled={!feedbackText.trim()}
+                            className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
+                          >
+                            Revise Draft
+                          </button>
+                          <button
+                            onClick={handleReviseAll}
+                            disabled={
+                              !feedbackText.trim() ||
+                              !Array.from(drafts.values()).some(draft => draft.status === 'complete')
                             }
-                          }}
-                          disabled={!feedbackText.trim()} // Corrected: removed redundant currentDraft.status check
-                          className="mt-2 px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
-                        >
-                          Revise Draft
-                        </button>
+                            className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
+                          >
+                            Revise All
+                          </button>
+                        </div>
                       </div>
                     )}
                   </>
