@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const formHtml = await fetchFormHtml(url);
     
     // Analyze the form with AI
-    const formAnalysis = await analyzeFormWithAI(formHtml, userData, representative);
+    const formAnalysis = await analyzeFormWithAI(formHtml, userData, representative, url);
     
     console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
     
@@ -103,7 +103,8 @@ async function fetchFormHtml(url: string): Promise<string> {
 async function analyzeFormWithAI(
   html: string, 
   userData: any, 
-  representative: any
+  representative: any,
+  url: string
 ): Promise<FormAnalysis> {
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
