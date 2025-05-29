@@ -11,7 +11,7 @@ export default function IssueDetailsPage() {
   const [demands, setDemands] = useState<string[]>([]);
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
-  const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set()); // For manual selection
+  const [manualSelectedReps, setManualSelectedReps] = useState<Set<number>>(new Set()); // For manual selection
   const [aiSelectedReps, setAiSelectedReps] = useState<Set<number>>(new Set()); // Original AI picks (immutable)
   const [aiRefinedReps, setAiRefinedReps] = useState<Set<number>>(new Set()); // User's refined AI selection
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function IssueDetailsPage() {
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Get the appropriate selected reps based on current mode
-  const currentSelectedReps = pickMode === 'ai' ? aiRefinedReps : selectedReps;
+  const currentSelectedReps = pickMode === 'ai' ? aiRefinedReps : manualSelectedReps;
 
   useEffect(() => {
     // Get the address from localStorage
@@ -81,7 +81,7 @@ export default function IssueDetailsPage() {
     }
 
     // We'll restore selected reps after fetching representatives
-    const manualSelectedRepsSet = new Set(draftData.selectedReps || []);
+    const manualSelectedRepsSet = new Set(draftData.manualSelectedReps || []);
     const aiSelectedRepsSet = new Set(draftData.aiSelectedReps || []);
     const aiRefinedRepsSet = new Set(draftData.aiRefinedReps || []);
 
@@ -101,7 +101,8 @@ export default function IssueDetailsPage() {
       ...existingData,
       demands,
       personalInfo,
-      selectedReps: Array.from(selectedReps),
+      selectedReps: Array.from(currentSelectedReps), // Always save the current mode's selection
+      manualSelectedReps: Array.from(manualSelectedReps),
       aiSelectedReps: Array.from(aiSelectedReps),
       aiRefinedReps: Array.from(aiRefinedReps),
       selectionSummary,
@@ -110,7 +111,7 @@ export default function IssueDetailsPage() {
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [demands, personalInfo, selectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode]);
+  }, [demands, personalInfo, manualSelectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode, currentSelectedReps]);
 
   // Auto-trigger AI selection when conditions are met
   useEffect(() => {
@@ -252,10 +253,10 @@ export default function IssueDetailsPage() {
           }
         });
         
-        setSelectedReps(validSelectedReps);
+        setManualSelectedReps(validSelectedReps);
       } else {
         // Start with no selected representatives for new addresses
-        setSelectedReps(new Set<number>());
+        setManualSelectedReps(new Set<number>());
       }
       
       // Restore AI selections if we have them
@@ -337,13 +338,13 @@ export default function IssueDetailsPage() {
         }
       } else {
         // In manual mode, toggle in manual selection
-        const newSelected = new Set(selectedReps);
+        const newSelected = new Set(manualSelectedReps);
         if (newSelected.has(index)) {
           newSelected.delete(index);
         } else {
           newSelected.add(index);
         }
-        setSelectedReps(newSelected);
+        setManualSelectedReps(newSelected);
       }
     }
   };
@@ -355,12 +356,12 @@ export default function IssueDetailsPage() {
       .filter(item => item.rep.contacts && item.rep.contacts.length > 0)
       .map(item => item.index);
     
-    setSelectedReps(new Set(representativesWithContacts));
+    setManualSelectedReps(new Set(representativesWithContacts));
   };
   
   const handleUnselectAll = () => {
     // Unselect all representatives
-    setSelectedReps(new Set());
+    setManualSelectedReps(new Set());
   };
   
   // Handler for the "Pick for Me" feature
@@ -458,7 +459,7 @@ export default function IssueDetailsPage() {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
       // Clear all selected representatives
-      setSelectedReps(new Set<number>());
+      setManualSelectedReps(new Set<number>());
       setAiSelectedReps(new Set<number>());
       setAiRefinedReps(new Set<number>());
 
@@ -474,6 +475,7 @@ export default function IssueDetailsPage() {
           const updatedData = {
             ...parsedData,
             selectedReps: [],
+            manualSelectedReps: [],
             aiSelectedReps: [],
             aiRefinedReps: [],
             selectionSummary: null,
@@ -523,8 +525,8 @@ export default function IssueDetailsPage() {
       const draftData = {
         demands: validDemands,
         personalInfo: personalInfo.trim(),
-        representatives: representatives.filter((_, index) => selectedReps.has(index)),
-        selectedReps: Array.from(selectedReps),
+        representatives: representatives.filter((_, index) => currentSelectedReps.has(index)),
+        selectedReps: Array.from(currentSelectedReps),
         // Use current AI selection data or fall back to previously stored data
         selectionSummary: existingSelectionSummary || existingData.selectionSummary,
         selectionExplanations: existingSelectionExplanations || existingData.selectionExplanations
@@ -913,9 +915,9 @@ export default function IssueDetailsPage() {
               <div className="max-h-[600px] overflow-y-auto pr-2">
                 {/* Selection controls */}
                 <div className="flex space-x-2 text-sm mb-3">
-                  {selectedReps.size > 0 && (
+                  {manualSelectedReps.size > 0 && (
                     <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
-                      {selectedReps.size} selected
+                      {manualSelectedReps.size} selected
                     </span>
                   )}
                   <button
@@ -924,7 +926,7 @@ export default function IssueDetailsPage() {
                   >
                     Select All ({representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length})
                   </button>
-                  {selectedReps.size > 0 && (
+                  {manualSelectedReps.size > 0 && (
                     <button
                       onClick={handleUnselectAll}
                       className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
@@ -965,7 +967,7 @@ export default function IssueDetailsPage() {
                         {levelReps.map((rep, repIndex) => {
                           // Find the original index in the full representatives array
                           const index = representatives.findIndex(r => r === rep);
-                          const isSelected = selectedReps.has(index);
+                          const isSelected = manualSelectedReps.has(index);
                           const hasContacts = rep.contacts && rep.contacts.length > 0;
                           
                           return (

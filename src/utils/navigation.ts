@@ -4,7 +4,11 @@
 export interface DraftData {
   demands?: string[];
   personalInfo?: string;
-  selectedReps?: number[];
+  selectedReps?: number[]; // Always the current active selection
+  manualSelectedReps?: number[]; // Manual mode selections
+  aiSelectedReps?: number[]; // Original AI picks
+  aiRefinedReps?: number[]; // User's refined AI selection
+  activeMode?: 'ai' | 'manual';
   representatives?: any[];
   personalInfoCompleted?: boolean;
   selectionSummary?: string;
