@@ -11,6 +11,8 @@ export default function DemandsPage() {
   const [demands, setDemands] = useState<string[]>([]);
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   // No longer need expandedCategories as the component handles this internally
   
   useEffect(() => {
@@ -62,6 +64,31 @@ export default function DemandsPage() {
   const handleRemoveDemand = (index: number) => {
     const newDemands = demands.filter((_, i) => i !== index);
     setDemands(newDemands);
+    // Reset editing state if we're removing the item being edited
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setEditingValue('');
+    }
+  };
+
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditingValue(demands[index]);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingIndex !== null && editingValue.trim()) {
+      const newDemands = [...demands];
+      newDemands[editingIndex] = editingValue.trim();
+      setDemands(newDemands);
+      setEditingIndex(null);
+      setEditingValue('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditingValue('');
   };
 
   const handleClearForm = () => {
@@ -130,20 +157,58 @@ export default function DemandsPage() {
           <div className="space-y-3 mb-2">
             {demands.length > 0 ? (
               demands.map((demand, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={demand}
-                    onChange={(e) => handleDemandChange(index, e.target.value)}
-                    placeholder={`Enter your demand here`}
-                    className="flex-1 p-2 border border-gray-300 rounded-md"
-                  />
-                  <button
-                    onClick={() => handleRemoveDemand(index)}
-                    className="p-2 text-red-500 hover:text-red-700"
-                  >
-                    ✕
-                  </button>
+                <div key={index} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-1">
+                  {editingIndex === index ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveEdit();
+                          } else if (e.key === 'Escape') {
+                            handleCancelEdit();
+                          }
+                        }}
+                        placeholder={`Enter your demand here`}
+                        className="flex-1 p-2 border border-gray-300 rounded-md bg-white"
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleSaveEdit}
+                        className="p-2 text-green-600 hover:text-green-800"
+                        title="Save"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="p-2 text-gray-500 hover:text-gray-700"
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex-1 p-2 font-medium text-gray-800">{demand}</p>
+                      <button
+                        onClick={() => handleStartEdit(index)}
+                        className="p-2 text-blue-600 hover:text-blue-800"
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => handleRemoveDemand(index)}
+                        className="p-2 text-red-500 hover:text-red-700"
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               ))
             ) : (
