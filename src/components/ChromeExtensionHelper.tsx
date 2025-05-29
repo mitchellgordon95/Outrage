@@ -32,6 +32,8 @@ export default function ChromeExtensionHelper({
   }, []);
   
   const checkExtensionInstalled = () => {
+    console.log('Checking extension with ID:', EXTENSION_ID);
+    
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       // Try to send a test message to the extension
       try {
@@ -39,16 +41,28 @@ export default function ChromeExtensionHelper({
           EXTENSION_ID,
           { action: 'ping' },
           (response) => {
+            console.log('Extension ping response:', response);
+            console.log('Chrome runtime last error:', chrome.runtime.lastError);
+            
             if (chrome.runtime.lastError) {
+              console.error('Extension not detected:', chrome.runtime.lastError.message);
               setExtensionInstalled(false);
-            } else {
+            } else if (response && response.pong) {
+              console.log('Extension detected successfully!');
               setExtensionInstalled(true);
+            } else {
+              console.error('Unexpected response from extension:', response);
+              setExtensionInstalled(false);
             }
           }
         );
       } catch (error) {
+        console.error('Error checking extension:', error);
         setExtensionInstalled(false);
       }
+    } else {
+      console.error('Chrome runtime not available');
+      setExtensionInstalled(false);
     }
   };
   

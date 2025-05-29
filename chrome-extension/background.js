@@ -6,7 +6,11 @@ chrome.runtime.onMessageExternal.addListener(
   (request, sender, sendResponse) => {
     console.log('Received external message:', request);
     
-    if (request.action === 'startFormFilling') {
+    if (request.action === 'ping') {
+      // For extension detection
+      sendResponse({ pong: true });
+      return; // Don't return true for synchronous responses
+    } else if (request.action === 'startFormFilling') {
       handleFormFillingRequest(request.data)
         .then(response => sendResponse({ success: true, data: response }))
         .catch(error => sendResponse({ success: false, error: error.message }));
