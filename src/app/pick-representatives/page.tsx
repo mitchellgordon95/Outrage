@@ -21,6 +21,7 @@ export default function IssueDetailsPage() {
   const [isAiSelecting, setIsAiSelecting] = useState(false); // For "Pick for Me" feature
   const [selectionSummary, setSelectionSummary] = useState<string | null>(null); // Summary of AI selection
   const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
+  const [pickMode, setPickMode] = useState<'ai' | 'manual'>('manual'); // Toggle between AI and manual selection
   const addressInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -541,44 +542,42 @@ export default function IssueDetailsPage() {
                 </div>
               </div>
               
-              {/* Pick Based on My Demands button */}
-              <div className="flex mb-2">
+              {/* Toggle between AI and Manual selection */}
+              <div className="flex mb-4">
                 {!isLoading && representatives.length > 0 && (
                   <div className="flex items-center">
-                    <button
-                      onClick={handlePickForMe}
-                      disabled={
-                        isAiSelecting || 
-                        demands.filter(d => d.trim()).length === 0 ||
-                        representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
-                      }
-                      className="px-2 py-1 bg-primary text-white rounded hover:bg-opacity-90 flex items-center space-x-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                    {isAiSelecting ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Selecting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        <span>Pick Based on My Demands</span>
-                      </>
-                    )}
-                    </button>
+                    <div className="inline-flex rounded-md shadow-sm" role="group">
+                      <button
+                        type="button"
+                        onClick={() => setPickMode('ai')}
+                        className={`px-4 py-2 text-sm font-medium border ${pickMode === 'ai' 
+                          ? 'bg-primary text-white border-primary z-10' 
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'} 
+                          rounded-l-lg focus:z-10 focus:ring-2 focus:ring-primary`}
+                      >
+                        AI Picks For Me
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPickMode('manual')}
+                        className={`px-4 py-2 text-sm font-medium border ${pickMode === 'manual' 
+                          ? 'bg-primary text-white border-primary z-10' 
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'} 
+                          rounded-r-lg focus:z-10 focus:ring-2 focus:ring-primary`}
+                      >
+                        Pick Manually
+                      </button>
+                    </div>
                     {/* Help Tooltip */}
-                    <div className="relative ml-1 group">
+                    <div className="relative ml-2 group">
                       <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded-full border border-gray-300 cursor-help text-gray-500 hover:bg-gray-200">
                         <span>?</span>
                       </div>
                       <div className="absolute z-10 right-0 transform translate-y-2 w-64 px-4 py-3 bg-white rounded shadow-lg invisible group-hover:visible border border-gray-200">
                         <p className="text-sm text-gray-600">
-                          AI will analyze your demands and automatically select the most relevant representatives based on their jurisdiction and responsibilities.
+                          {pickMode === 'ai' 
+                            ? "AI will analyze your demands and automatically select the most relevant representatives based on their jurisdiction and responsibilities."
+                            : "Manually select which representatives you want to contact by checking the boxes next to their names."}
                         </p>
                       </div>
                     </div>
@@ -587,19 +586,57 @@ export default function IssueDetailsPage() {
               </div>
             </div>
             
-            {/* Selection Summary - Compact version at the top */}
-            {!isLoading && selectionSummary && !apiError && (
-              <div className="mb-3 py-2 px-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-700">{selectionSummary}</p>
-              </div>
+            {/* AI Mode: Show AI summary and selected reps */}
+            {pickMode === 'ai' && !isLoading && !apiError && (
+              <>
+                {/* AI Selection Summary */}
+                {selectionSummary && (
+                  <div className="mb-3 py-2 px-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm text-blue-700">{selectionSummary}</p>
+                  </div>
+                )}
+                
+                {/* AI Pick Button if no selection yet */}
+                {selectedReps.size === 0 && (
+                  <div className="text-center py-8">
+                    <button
+                      onClick={handlePickForMe}
+                      disabled={
+                        isAiSelecting || 
+                        demands.filter(d => d.trim()).length === 0 ||
+                        representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
+                      }
+                      className="px-6 py-3 bg-primary text-white rounded-md hover:bg-opacity-90 flex items-center space-x-2 disabled:bg-gray-300 disabled:cursor-not-allowed mx-auto"
+                    >
+                      {isAiSelecting ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>AI is selecting representatives...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                          </svg>
+                          <span>Let AI Pick Representatives</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-sm text-gray-500 mt-2">AI will select the most relevant representatives based on your demands</p>
+                  </div>
+                )}
+              </>
             )}
             
-            {/* Selected Representatives Section - Fixed position */}
-            {!isLoading && selectedReps.size > 0 && !apiError && (
+            {/* Selected Representatives Section - Show only in AI mode */}
+            {pickMode === 'ai' && !isLoading && selectedReps.size > 0 && !apiError && (
               <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
                 <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
-                {/* Move just Unselect All and count here */}
-                {selectedReps.size > 0 && (
+                {/* Show count and unselect all only in AI mode */}
+                {pickMode === 'ai' && selectedReps.size > 0 && (
                   <div className="flex space-x-2 text-sm mb-3">
                     <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
                       {selectedReps.size} selected
@@ -728,54 +765,30 @@ export default function IssueDetailsPage() {
               </div>
             )}
             
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="mb-4 h-2 bg-gray-200 rounded">
-                  <div
-                    className="h-full bg-primary rounded transition-all duration-300"
-                    style={{ width: `${loadingProgress}%` }}
-                  ></div>
-                </div>
-                <p>Loading your representatives...</p>
-              </div>
-            ) : apiError ? (
-              <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-md">
-                <h2 className="text-lg font-semibold text-red-600 mb-2">Error Loading Representatives</h2>
-                <p className="text-red-700 mb-4">
-                  {apiError}
-                </p>
-                <div className="mb-4 text-sm text-gray-700">
-                  <p>Possible solutions:</p>
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>Check that you entered a valid US address</li>
-                    <li>Try a different address if the problem persists</li>
-                  </ul>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => fetchRepresentatives(address)}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
-                  >
-                    Retry
-                  </button>
-                  <button 
-                    onClick={handleEditAddress}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 inline-flex items-center"
-                  >
-                    Change Address
-                  </button>
-                </div>
-              </div>
-            ) : (
+            {/* Manual Mode: Show full representative list */}
+            {pickMode === 'manual' && !isLoading && !apiError && (
               <div className="max-h-[600px] overflow-y-auto pr-2">
                 {/* Selection controls */}
                 <div className="flex space-x-2 text-sm mb-3">
+                  {selectedReps.size > 0 && (
+                    <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
+                      {selectedReps.size} selected
+                    </span>
+                  )}
                   <button
                     onClick={handleSelectAll}
                     className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
                   >
                     Select All ({representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length})
                   </button>
+                  {selectedReps.size > 0 && (
+                    <button
+                      onClick={handleUnselectAll}
+                      className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Unselect All
+                    </button>
+                  )}
                 </div>
                 
                 {/* Group and display all representatives by level */}
@@ -910,6 +923,50 @@ export default function IssueDetailsPage() {
                   </div>
                 )}
               </div>
+            )}
+            
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="mb-4 h-2 bg-gray-200 rounded">
+                  <div
+                    className="h-full bg-primary rounded transition-all duration-300"
+                    style={{ width: `${loadingProgress}%` }}
+                  ></div>
+                </div>
+                <p>Loading your representatives...</p>
+              </div>
+            ) : apiError ? (
+              <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-md">
+                <h2 className="text-lg font-semibold text-red-600 mb-2">Error Loading Representatives</h2>
+                <p className="text-red-700 mb-4">
+                  {apiError}
+                </p>
+                <div className="mb-4 text-sm text-gray-700">
+                  <p>Possible solutions:</p>
+                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li>Check that you entered a valid US address</li>
+                    <li>Try a different address if the problem persists</li>
+                  </ul>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fetchRepresentatives(address)}
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
+                  >
+                    Retry
+                  </button>
+                  <button 
+                    onClick={handleEditAddress}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 inline-flex items-center"
+                  >
+                    Change Address
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Empty state */}
+              </>
             )}
           </div>
         </div>
