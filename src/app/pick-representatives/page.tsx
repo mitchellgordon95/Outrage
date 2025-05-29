@@ -11,7 +11,8 @@ export default function IssueDetailsPage() {
   const [demands, setDemands] = useState<string[]>([]);
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
-  const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set());
+  const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set()); // For manual selection
+  const [aiSelectedReps, setAiSelectedReps] = useState<Set<number>>(new Set()); // For AI selection
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [address, setAddress] = useState('');
@@ -21,8 +22,11 @@ export default function IssueDetailsPage() {
   const [isAiSelecting, setIsAiSelecting] = useState(false); // For "Pick for Me" feature
   const [selectionSummary, setSelectionSummary] = useState<string | null>(null); // Summary of AI selection
   const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
-  const [pickMode, setPickMode] = useState<'ai' | 'manual'>('manual'); // Toggle between AI and manual selection
+  const [pickMode, setPickMode] = useState<'ai' | 'manual'>('ai'); // Toggle between AI and manual selection - default to AI
   const addressInputRef = useRef<HTMLInputElement>(null);
+  
+  // Get the appropriate selected reps based on current mode
+  const currentSelectedReps = pickMode === 'ai' ? aiSelectedReps : selectedReps;
 
   useEffect(() => {
     // Get the address from localStorage
@@ -71,10 +75,11 @@ export default function IssueDetailsPage() {
     }
 
     // We'll restore selected reps after fetching representatives
-    const selectedRepsSet = new Set(draftData.selectedReps || []);
+    const manualSelectedRepsSet = new Set(draftData.selectedReps || []);
+    const aiSelectedRepsSet = new Set(draftData.aiSelectedReps || []);
 
     // Fetch representatives and then restore selection
-    fetchRepresentatives(storedAddress, selectedRepsSet);
+    fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet);
   }, [router]);
   
   // Save state whenever any relevant state changes
@@ -90,12 +95,38 @@ export default function IssueDetailsPage() {
       demands,
       personalInfo,
       selectedReps: Array.from(selectedReps),
+      aiSelectedReps: Array.from(aiSelectedReps),
       selectionSummary,
       selectionExplanations
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [demands, personalInfo, selectedReps, address, selectionSummary, selectionExplanations]);
+  }, [demands, personalInfo, selectedReps, aiSelectedReps, address, selectionSummary, selectionExplanations]);
+
+  // Auto-trigger AI selection when conditions are met
+  useEffect(() => {
+    // Only trigger if:
+    // 1. We're in AI mode
+    // 2. Representatives are loaded
+    // 3. We don't have AI selections yet
+    // 4. We have valid demands
+    // 5. We're not currently loading or selecting
+    
+    const validDemands = demands.filter(d => d.trim()).length > 0;
+    const hasContactableReps = representatives.some(rep => rep.contacts && rep.contacts.length > 0);
+    
+    if (
+      pickMode === 'ai' &&
+      representatives.length > 0 &&
+      aiSelectedReps.size === 0 &&
+      validDemands &&
+      hasContactableReps &&
+      !isLoading &&
+      !isAiSelecting
+    ) {
+      handlePickForMe();
+    }
+  }, [pickMode, representatives, aiSelectedReps.size, demands, isLoading, isAiSelecting]);
 
   // Set up Google Maps autocomplete when editing address
   useEffect(() => {
@@ -153,7 +184,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string, initialSelectedReps?: Set<unknown>) => {
+  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<unknown>, initialAiSelectedReps?: Set<unknown>) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -183,14 +214,13 @@ export default function IssueDetailsPage() {
       
       setRepresentatives(reps);
       
-      // If we have previously selected representatives, use those
-      // Otherwise start with no selection for new addresses
-      if (initialSelectedReps && initialSelectedReps.size > 0) {
+      // Restore manual selections if we have them
+      if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
         // Filter out any invalid indexes
         const validSelectedReps = new Set<number>();
         
         // Convert to array and filter
-        Array.from(initialSelectedReps).forEach(item => {
+        Array.from(initialManualSelectedReps).forEach(item => {
           const index = Number(item);
           if (!isNaN(index) && index < reps.length) {
             validSelectedReps.add(index);
@@ -202,6 +232,28 @@ export default function IssueDetailsPage() {
         // Start with no selected representatives for new addresses
         setSelectedReps(new Set<number>());
       }
+      
+      // Restore AI selections if we have them
+      let hasValidAiSelections = false;
+      if (initialAiSelectedReps && initialAiSelectedReps.size > 0) {
+        // Filter out any invalid indexes
+        const validAiSelectedReps = new Set<number>();
+        
+        // Convert to array and filter
+        Array.from(initialAiSelectedReps).forEach(item => {
+          const index = Number(item);
+          if (!isNaN(index) && index < reps.length) {
+            validAiSelectedReps.add(index);
+          }
+        });
+        
+        if (validAiSelectedReps.size > 0) {
+          setAiSelectedReps(validAiSelectedReps);
+          hasValidAiSelections = true;
+        }
+      }
+      
+      // Don't auto-trigger here - let useEffect handle it after state is settled
     } catch (error) {
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -254,7 +306,7 @@ export default function IssueDetailsPage() {
   };
   
   // Handler for the "Pick for Me" feature
-  const handlePickForMe = async () => {
+  const handlePickForMe = async (repsToUse?: Representative[]) => {
     // Check if there are any valid demands entered
     const validDemands = demands.filter(demand => demand.trim());
     if (validDemands.length === 0) {
@@ -270,11 +322,14 @@ export default function IssueDetailsPage() {
     setIsAiSelecting(true);
     
     try {
+      // Use passed representatives or fall back to state
+      const repsForSelection = repsToUse || representatives;
+      
       // Filter out representatives without contacts
-      const contactableReps = representatives.filter(rep => rep.contacts && rep.contacts.length > 0);
+      const contactableReps = repsForSelection.filter(rep => rep.contacts && rep.contacts.length > 0);
       
       // Create a mapping from filtered index to original index
-      const indexMap = contactableReps.map(rep => representatives.findIndex(r => r === rep));
+      const indexMap = contactableReps.map(rep => repsForSelection.findIndex(r => r === rep));
       
       // Call the AI selection API - only send representatives that have contacts
       const response = await fetch('/api/select-representatives', {
@@ -298,7 +353,7 @@ export default function IssueDetailsPage() {
       if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
         // Map the filtered indices back to original indices
         const originalIndices = data.selectedIndices.map((idx: number) => indexMap[idx]).filter((idx: number | undefined) => idx !== undefined);
-        setSelectedReps(new Set(originalIndices as number[]));
+        setAiSelectedReps(new Set(originalIndices as number[]));
         
         // Update summary
         if (data.summary) {
@@ -335,15 +390,16 @@ export default function IssueDetailsPage() {
     setAddress(newAddress);
     setIsEditingAddress(false);
     
-    // Fetch representatives for the new address
-    fetchRepresentatives(newAddress);
+    // Fetch representatives for the new address (clear both selections for new address)
+    fetchRepresentatives(newAddress, new Set(), new Set());
   };
 
   const handleClearSelections = () => {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
-      // Clear selected representatives
+      // Clear both selected representatives
       setSelectedReps(new Set<number>());
+      setAiSelectedReps(new Set<number>());
 
       // Clear selection summary and explanations
       setSelectionSummary(null);
@@ -357,6 +413,7 @@ export default function IssueDetailsPage() {
           const updatedData = {
             ...parsedData,
             selectedReps: [],
+            aiSelectedReps: [],
             selectionSummary: null,
             selectionExplanations: {}
           };
@@ -596,19 +653,33 @@ export default function IssueDetailsPage() {
                   </div>
                 )}
                 
-                {/* AI Pick Button if no selection yet */}
-                {selectedReps.size === 0 && (
+                {/* AI Pick Button or loading state if no selection yet */}
+                {aiSelectedReps.size === 0 && (
                   <div className="text-center py-8">
-                    <button
-                      onClick={handlePickForMe}
-                      disabled={
-                        isAiSelecting || 
-                        demands.filter(d => d.trim()).length === 0 ||
-                        representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
-                      }
-                      className="px-6 py-3 bg-primary text-white rounded-md hover:bg-opacity-90 flex items-center space-x-2 disabled:bg-gray-300 disabled:cursor-not-allowed mx-auto"
-                    >
-                      {isAiSelecting ? (
+                    {/* Show loading state if conditions suggest auto-selection will trigger */}
+                    {(isAiSelecting || (representatives.length === 0 && demands.filter(d => d.trim()).length > 0)) ? (
+                      <div className="flex flex-col items-center">
+                        <div className="flex items-center space-x-2">
+                          <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span className="text-gray-700">AI is selecting representatives...</span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handlePickForMe()}
+                          disabled={
+                            isAiSelecting || 
+                            demands.filter(d => d.trim()).length === 0 ||
+                            representatives.filter(rep => rep.contacts && rep.contacts.length > 0).length === 0
+                          }
+                          className="px-6 py-3 bg-primary text-white rounded-md hover:bg-opacity-90 flex items-center space-x-2 disabled:bg-gray-300 disabled:cursor-not-allowed mx-auto"
+                        >
+                          {isAiSelecting ? (
                         <>
                           <svg className="animate-spin -ml-1 mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -623,26 +694,28 @@ export default function IssueDetailsPage() {
                           </svg>
                           <span>Let AI Pick Representatives</span>
                         </>
-                      )}
-                    </button>
-                    <p className="text-sm text-gray-500 mt-2">AI will select the most relevant representatives based on your demands</p>
+                          )}
+                        </button>
+                        <p className="text-sm text-gray-500 mt-2">AI will select the most relevant representatives based on your demands</p>
+                      </>
+                    )}
                   </div>
                 )}
               </>
             )}
             
             {/* Selected Representatives Section - Show only in AI mode */}
-            {pickMode === 'ai' && !isLoading && selectedReps.size > 0 && !apiError && (
+            {pickMode === 'ai' && !isLoading && aiSelectedReps.size > 0 && !apiError && (
               <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
                 <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
                 {/* Show count and unselect all only in AI mode */}
-                {pickMode === 'ai' && selectedReps.size > 0 && (
+                {pickMode === 'ai' && aiSelectedReps.size > 0 && (
                   <div className="flex space-x-2 text-sm mb-3">
                     <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
-                      {selectedReps.size} selected
+                      {aiSelectedReps.size} selected
                     </span>
                     <button
-                      onClick={handleUnselectAll}
+                      onClick={() => setAiSelectedReps(new Set())}
                       className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                     >
                       Unselect All
@@ -650,7 +723,7 @@ export default function IssueDetailsPage() {
                   </div>
                 )}
                 <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-1">
-                  {Array.from(selectedReps).sort((a, b) => {
+                  {Array.from(aiSelectedReps).sort((a, b) => {
                     // Sort by contact availability
                     const aRep = representatives[a];
                     const bRep = representatives[b];
@@ -987,12 +1060,12 @@ export default function IssueDetailsPage() {
             disabled={
               isDraftLoading ||
               representatives.length === 0 ||
-              selectedReps.size === 0 ||
+              currentSelectedReps.size === 0 ||
               demands.filter(d => d.trim()).length === 0
             }
             className="flex-1 py-3 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isDraftLoading ? 'Loading...' : selectedReps.size === 0 ? 'Select Representatives to Continue' : 'Continue to Personal Info'}
+            {isDraftLoading ? 'Loading...' : currentSelectedReps.size === 0 ? 'Select Representatives to Continue' : 'Continue to Personal Info'}
           </button>
         </div>
         
