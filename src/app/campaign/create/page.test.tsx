@@ -31,7 +31,7 @@ const mockRepresentatives: Representative[] = [
 const mockDraftData = {
   demands: ['Demand 1: Universal Basic Income'],
   representatives: mockRepresentatives,
-  selectedReps: [], // This is usually an array of IDs from issue-details page, but CreateCampaignPage uses 'representatives'
+  selectedReps: [], // This is usually an array of IDs from pick-representatives page, but CreateCampaignPage uses 'representatives'
 };
 
 describe('CreateCampaignPage', () => {

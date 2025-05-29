@@ -29,14 +29,14 @@ export default function CreateCampaignPage() {
     // Check for the actual Representative objects
     if (!draftData.representatives || !Array.isArray(draftData.representatives) || draftData.representatives.length === 0) {
       alert('No representative data found. Please select representatives first.');
-      router.replace('/issue-details'); // Or where reps are selected
+      router.replace('/pick-representatives'); // Or where reps are selected
       return;
     }
     // Also ensure selectedReps (IDs) are present if your logic relies on them elsewhere,
     // though for this page, draftData.representatives are primary.
     if (!draftData.selectedReps || draftData.selectedReps.length === 0) {
         alert('No representative selections found. Please select representatives first.');
-        router.replace('/issue-details');
+        router.replace('/pick-representatives');
         return;
     }
 

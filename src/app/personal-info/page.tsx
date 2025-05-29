@@ -43,7 +43,7 @@ export default function PersonalInfoPage() {
 
     // Check if we have selected representatives - required for this page
     if (!progress.representatives) {
-      router.replace('/issue-details');
+      router.replace('/pick-representatives');
       return;
     }
 
@@ -221,7 +221,7 @@ export default function PersonalInfoPage() {
         {/* Navigation progress */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
-            <button onClick={() => router.push('/issue-details')} className="text-primary hover:underline flex items-center">
+            <button onClick={() => router.push('/pick-representatives')} className="text-primary hover:underline flex items-center">
               <span className="mr-1">←</span> Back to Representatives
             </button>
           </div>
@@ -286,7 +286,7 @@ export default function PersonalInfoPage() {
             <h2 className="font-semibold mb-2">Selected Representatives</h2>
             <p className="text-sm">{selectedReps.length} representatives selected</p>
             <button
-              onClick={() => router.push('/issue-details')}
+              onClick={() => router.push('/pick-representatives')}
               className="mt-3 text-xs text-purple-600 hover:underline"
             >
               Edit

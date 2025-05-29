@@ -91,7 +91,7 @@ export default function DemandsPage() {
     setIsLoading(true);
     
     // Navigate to the representatives selection page
-    router.push('/issue-details');
+    router.push('/pick-representatives');
   };
 
   return (

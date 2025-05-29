@@ -46,7 +46,7 @@ export function getNextPageFromProgress(progress: ProgressState): string {
   } else if (progress.representatives) {
     return '/personal-info';
   } else if (progress.demands) {
-    return '/issue-details';
+    return '/pick-representatives';
   } else {
     return '/demands';
   }

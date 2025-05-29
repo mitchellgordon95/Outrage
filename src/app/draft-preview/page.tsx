@@ -49,7 +49,7 @@ export default function DraftPreviewPage() {
     }
     
     if (!progress.representatives) {
-      router.replace('/issue-details');
+      router.replace('/pick-representatives');
       return;
     }
     
@@ -81,7 +81,7 @@ export default function DraftPreviewPage() {
     // And representatives
     if (!reps || !Array.isArray(reps) || reps.length === 0) {
       console.error('No representatives found');
-      router.replace('/issue-details');
+      router.replace('/pick-representatives');
       return;
     }
     
