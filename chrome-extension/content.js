@@ -87,14 +87,7 @@ async function fillForm(formAnalysis, userData) {
     const form = document.querySelector(formSelector);
     
     if (!form) {
-      // Try to find any form as fallback
-      const anyForm = document.querySelector('form');
-      if (anyForm) {
-        console.warn(`Form not found with selector "${formSelector}", but found a form on the page. Using first form as fallback.`);
-        // Continue with the first form found
-      } else {
-        throw new Error('Form not found with selector: ' + formSelector);
-      }
+      throw new Error('Form not found with selector: ' + formSelector);
     }
     
     // Show filling indicator
@@ -106,11 +99,7 @@ async function fillForm(formAnalysis, userData) {
       throw new Error('Invalid form analysis: fieldMappings is missing or invalid');
     }
     
-    // Use the form we found (either the specified one or the fallback)
-    const formToUse = form || document.querySelector('form');
-    if (!formToUse) {
-      throw new Error('No form found on the page');
-    }
+    // Removed fallback logic - the AI should provide the correct selector
     
     // Fill each mapped field
     for (const [dataKey, fieldInfo] of Object.entries(fieldMappings)) {

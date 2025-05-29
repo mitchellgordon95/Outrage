@@ -69,21 +69,34 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 async function fetchFormHtml(url: string): Promise<string> {
+  console.log('Fetching form HTML from:', url);
+  
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
       },
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch form: ${response.statusText}`);
+      throw new Error(`Failed to fetch form: ${response.status} ${response.statusText}`);
     }
     
-    return await response.text();
+    const html = await response.text();
+    console.log('Fetched HTML length:', html.length);
+    
+    // Check if we got real HTML
+    if (!html.includes('<') || html.length < 100) {
+      console.error('Suspicious HTML response:', html.substring(0, 200));
+      throw new Error('Received invalid HTML response');
+    }
+    
+    return html;
   } catch (error) {
     console.error('Error fetching form:', error);
-    throw new Error('Failed to fetch form HTML');
+    throw new Error('Failed to fetch form HTML: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
 
@@ -99,44 +112,55 @@ async function analyzeFormWithAI(
     throw new Error('ANTHROPIC_API_KEY not configured');
   }
 
-  const prompt = `You are analyzing an HTML form for a government representative contact page. 
-Your task is to map user data fields to form fields by providing CSS selectors.
+  // Log what we're sending to the AI
+  console.log('=== FORM ANALYSIS REQUEST ===');
+  console.log('URL:', url);
+  console.log('User Data:', JSON.stringify(userData, null, 2));
+  console.log('HTML Length:', html.length);
+  console.log('HTML Preview (first 500 chars):', html.substring(0, 500));
+  
+  // Look for forms in the HTML for logging
+  const formMatches = html.match(/<form[^>]*>/gi);
+  console.log('Forms found in HTML:', formMatches?.length || 0);
+  if (formMatches) {
+    formMatches.forEach((form, i) => {
+      console.log(`Form ${i}:`, form);
+    });
+  }
+  
+  const prompt = `Analyze this HTML page and find the contact form. Extract the ACTUAL selectors from the HTML - do not make up or guess selectors.
 
-User Data Available:
+User Data to Map:
 ${JSON.stringify(userData, null, 2)}
 
-Representative Info:
-${JSON.stringify(representative, null, 2)}
+HTML Page:
+${html.substring(0, 15000)}
 
-HTML Form (truncated to relevant parts):
-${html.substring(0, 10000)}
+Your task:
+1. Find the main contact form in the HTML (look for <form> tags)
+2. Identify the actual id, class, or other attributes of the form
+3. Find input fields that match the user data fields
+4. Return the EXACT selectors as they appear in the HTML
 
-Please analyze the form and return a JSON object with the following structure:
+Return a JSON object with this structure:
 {
   "fieldMappings": {
-    "firstName": { "selector": "#first_name", "type": "text" },
-    "lastName": { "selector": "#last_name", "type": "text" },
-    "email": { "selector": "input[name='email']", "type": "email" },
-    "phone": { "selector": "#phone", "type": "tel" },
-    "address.street": { "selector": "#address1", "type": "text" },
-    "address.city": { "selector": "#city", "type": "text" },
-    "address.state": { "selector": "#state", "type": "select" },
-    "address.zip": { "selector": "#zip", "type": "text" },
-    "subject": { "selector": "#subject", "type": "text" },
-    "message": { "selector": "#message", "type": "textarea" }
+    "firstName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "lastName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "email": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "message": { "selector": "[actual selector from HTML]", "type": "textarea" }
+    // ... only include fields that actually exist in the form
   },
-  "formSelector": "form#contact-form",
-  "submitSelector": "button[type='submit']"
+  "formSelector": "[actual form selector, e.g., form#form_1 or form.whitehouse-form]",
+  "submitSelector": "[actual submit button selector]"
 }
 
-Rules:
-1. Only include fields that exist in both the userData and the form
-2. Use the most specific CSS selector possible
-3. For nested userData (like address.street), use dot notation in the key
-4. Identify the correct field type (text, email, tel, textarea, select, radio, checkbox)
-5. Find the main form selector and submit button selector
-6. Ignore any CAPTCHA fields
-7. Return ONLY valid JSON, no explanation or markdown`;
+IMPORTANT:
+- Use the EXACT id, class, or name attributes from the HTML
+- For formSelector, use the actual form's id or class (e.g., if <form id="form_1">, use "form#form_1")
+- Only include fields that actually exist in the HTML
+- Common field types: text, email, tel, textarea, select, radio, checkbox
+- Return ONLY valid JSON, no explanations`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -165,69 +189,21 @@ Rules:
     const data = await response.json();
     const content = data.content[0].text;
     
+    console.log('=== AI RESPONSE ===');
+    console.log('Raw AI Response:', content);
+    
     // Parse the JSON response
     try {
       const analysis = JSON.parse(content);
+      console.log('Parsed Analysis:', JSON.stringify(analysis, null, 2));
       return analysis;
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
-      // Return a basic fallback mapping
-      return getFallbackMapping();
+      console.error('Parse error:', parseError);
+      throw new Error('AI returned invalid JSON response');
     }
   } catch (error) {
     console.error('AI analysis failed:', error);
-    // Return a basic fallback mapping
-    return getFallbackMapping();
+    throw error;
   }
-}
-
-function getFallbackMapping(): FormAnalysis {
-  // Common form field patterns as fallback
-  // Using multiple selectors that will be tried in order
-  return {
-    fieldMappings: {
-      firstName: { 
-        selector: "input[name*='first' i]:not([type='hidden']), input[id*='first' i]:not([type='hidden']), input[placeholder*='first' i]:not([type='hidden'])", 
-        type: 'text' 
-      },
-      lastName: { 
-        selector: "input[name*='last' i]:not([type='hidden']), input[id*='last' i]:not([type='hidden']), input[placeholder*='last' i]:not([type='hidden'])", 
-        type: 'text' 
-      },
-      email: { 
-        selector: "input[type='email'], input[name*='email' i]:not([type='hidden']), input[id*='email' i]:not([type='hidden'])", 
-        type: 'email' 
-      },
-      phone: { 
-        selector: "input[type='tel'], input[name*='phone' i]:not([type='hidden']), input[id*='phone' i]:not([type='hidden']), input[name*='tel' i]:not([type='hidden'])", 
-        type: 'tel' 
-      },
-      'address.street': { 
-        selector: "input[name*='address' i]:not([type='hidden']):not([name*='2']), input[id*='address' i]:not([type='hidden']):not([id*='2']), input[name*='street' i]:not([type='hidden'])", 
-        type: 'text' 
-      },
-      'address.city': { 
-        selector: "input[name*='city' i]:not([type='hidden']), input[id*='city' i]:not([type='hidden'])", 
-        type: 'text' 
-      },
-      'address.state': { 
-        selector: "select[name*='state' i], select[id*='state' i], input[name*='state' i]:not([type='hidden'])", 
-        type: 'select' 
-      },
-      'address.zip': { 
-        selector: "input[name*='zip' i]:not([type='hidden']), input[id*='zip' i]:not([type='hidden']), input[name*='postal' i]:not([type='hidden'])", 
-        type: 'text' 
-      },
-      subject: { 
-        selector: "input[name*='subject' i]:not([type='hidden']), input[id*='subject' i]:not([type='hidden']), select[name*='topic' i], select[id*='topic' i]", 
-        type: 'text' 
-      },
-      message: { 
-        selector: "textarea[name*='message' i], textarea[id*='message' i], textarea[name*='comment' i], textarea[id*='comment' i], textarea[name*='text' i]", 
-        type: 'textarea' 
-      },
-    },
-    formSelector: 'form',
-    submitSelector: "button[type='submit'], input[type='submit'], button:contains('Send'), button:contains('Submit')",
-  };
 }
