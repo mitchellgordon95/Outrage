@@ -15,20 +15,30 @@ chrome.runtime.onMessageExternal.addListener(
   }
 );
 
-// Listen for messages from content scripts
+// Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Received message from content script:', request);
+  console.log('Received message:', request);
   
   if (request.action === 'getFormData') {
-    const sessionData = formSessions.get(sender.tab.id);
+    const sessionData = formSessions.get(sender.tab?.id);
     sendResponse(sessionData || null);
   } else if (request.action === 'formFilled') {
-    handleFormCompletion(sender.tab.id, request.data);
+    handleFormCompletion(sender.tab?.id, request.data);
   } else if (request.action === 'analyzeForm') {
-    analyzeForm(request.url, sender.tab.id)
+    analyzeForm(request.url, sender.tab?.id)
       .then(analysis => sendResponse({ success: true, data: analysis }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Will respond asynchronously
+  } else if (request.action === 'getActiveSessions') {
+    // For popup to display active sessions
+    const activeSessions = Array.from(formSessions.entries()).map(([tabId, session]) => ({
+      tabId,
+      ...session
+    }));
+    sendResponse(activeSessions);
+  } else if (request.action === 'ping') {
+    // For extension detection
+    sendResponse({ pong: true });
   }
 });
 

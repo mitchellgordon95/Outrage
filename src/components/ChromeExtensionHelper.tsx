@@ -23,7 +23,8 @@ export default function ChromeExtensionHelper({
   const [filling, setFilling] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   
-  const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE'; // Update this after publishing
+  // For development, we'll use a placeholder. In production, this should be set via environment variable
+  const EXTENSION_ID = process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID || 'YOUR_EXTENSION_ID_HERE';
   
   useEffect(() => {
     // Check if extension is installed

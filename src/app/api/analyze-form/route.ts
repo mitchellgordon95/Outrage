@@ -14,6 +14,18 @@ interface FormAnalysis {
 }
 
 export async function POST(request: NextRequest) {
+  // Add CORS headers for extension access
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers });
+  }
+
   try {
     const { url, userData, representative } = await request.json();
 
@@ -32,14 +44,26 @@ export async function POST(request: NextRequest) {
     // Analyze the form with AI
     const formAnalysis = await analyzeFormWithAI(formHtml, userData, representative);
     
-    return NextResponse.json(formAnalysis);
+    return NextResponse.json(formAnalysis, { headers });
   } catch (error) {
     console.error('Form analysis error:', error);
     return NextResponse.json(
       { error: 'Failed to analyze form', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
+}
+
+// Export OPTIONS handler for CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 async function fetchFormHtml(url: string): Promise<string> {

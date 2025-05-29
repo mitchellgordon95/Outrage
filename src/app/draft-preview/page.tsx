@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Representative } from '@/services/representatives';
 import { parseDraftData, getProgressState } from '@/utils/navigation';
+import ChromeExtensionHelper from '@/components/ChromeExtensionHelper';
 
 // Type for generated draft
 interface RepresentativeDraft {
@@ -23,6 +24,7 @@ export default function DraftPreviewPage() {
   const [selectedRepIndex, setSelectedRepIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [feedbackText, setFeedbackText] = useState('');
+  const [showExtensionHelper, setShowExtensionHelper] = useState(false);
 
   useEffect(() => {
     // Check for address
@@ -230,50 +232,63 @@ export default function DraftPreviewPage() {
   const handleSendMessages = async () => { // Made async
     const campaignId = localStorage.getItem('activeCampaignId');
 
-    // Create an array of links to open to avoid popup blocking
-    const linksToOpen: LinkToOpen[] = [];
+    // Separate representatives by contact type
+    const emailReps: Array<{rep: Representative, draft: RepresentativeDraft}> = [];
+    const webFormReps: Array<{rep: Representative, draft: RepresentativeDraft}> = [];
+    const socialMediaLinks: LinkToOpen[] = [];
     
     representatives.forEach((rep: Representative, index: number) => {
       const draft = drafts.get(index);
       if (draft?.status === 'complete' && rep.contacts && rep.contacts.length > 0) {
-        // Look for email contact first, then webform, then social media
+        // Look for contact methods
         const emailContact = rep.contacts.find(contact => contact.type === 'email');
         const webformContact = rep.contacts.find(contact => contact.type === 'webform');
         const twitterContact = rep.contacts.find(contact => contact.type === 'twitter');
-        const facebookContact = rep.contacts.find(contact => contact.type === 'facebook');
-        const instagramContact = rep.contacts.find(contact => contact.type === 'instagram');
         
-        // Prioritize email for sending messages
+        // Categorize representatives
         if (emailContact) {
-          const mailtoLink = `mailto:${emailContact.value}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
-          linksToOpen.push({ url: mailtoLink, name: rep.name, type: 'email' });
+          emailReps.push({ rep: { ...rep, email: emailContact.value }, draft });
         } else if (webformContact) {
-          linksToOpen.push({ url: webformContact.value, name: rep.name, type: 'webform' });
-        } 
+          webFormReps.push({ rep: { ...rep, webFormUrl: webformContact.value }, draft });
+        }
         
         // Add social media links for posting (optional)
         if (twitterContact) {
           // Create a Twitter intent URL with pre-filled content
           const tweetText = `@${twitterContact.value.replace('@', '')} ${draft.subject}\n\n${draft.content.substring(0, 240)}...`;
           const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-          linksToOpen.push({ url: tweetUrl, name: rep.name, type: 'twitter' });
+          socialMediaLinks.push({ url: tweetUrl, name: rep.name, type: 'twitter' });
         }
       }
     });
     
-    if (linksToOpen.length === 0) {
+    if (emailReps.length === 0 && webFormReps.length === 0) {
       alert("No contact methods available for your selected representatives.");
       return;
     }
     
+    // If there are web forms, show the extension helper
+    if (webFormReps.length > 0) {
+      setShowExtensionHelper(true);
+      return;
+    }
+    
+    // Otherwise, just handle emails and social media
+    const linksToOpen: LinkToOpen[] = [];
+    
+    emailReps.forEach(({ rep, draft }) => {
+      const mailtoLink = `mailto:${rep.email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
+      linksToOpen.push({ url: mailtoLink, name: rep.name, type: 'email' });
+    });
+    
+    linksToOpen.push(...socialMediaLinks);
+    
     // Show confirmation with count of tabs to be opened
-    const emailCount = linksToOpen.filter(link => link.type === 'email').length;
-    const webformCount = linksToOpen.filter(link => link.type === 'webform').length;
-    const twitterCount = linksToOpen.filter(link => link.type === 'twitter').length;
+    const emailCount = emailReps.length;
+    const twitterCount = socialMediaLinks.filter(link => link.type === 'twitter').length;
     
     const confirmMessage = `This will open:\n` + 
       (emailCount > 0 ? `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` : '') +
-      (webformCount > 0 ? `${webformCount} web ${webformCount === 1 ? 'form' : 'forms'}\n` : '') +
       (twitterCount > 0 ? `${twitterCount} Twitter ${twitterCount === 1 ? 'post' : 'posts'}\n` : '') +
       `\nYour browser may block popups. Please allow popups for this site.`;
     
@@ -286,14 +301,11 @@ export default function DraftPreviewPage() {
           if (!incrementResponse.ok) {
             const errorData = await incrementResponse.json();
             console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
-            // Optionally, inform user if critical, but likely silent failure is okay
-            // alert(`Note: Could not update campaign statistics for campaign ${campaignId}. Your messages are still being prepared.`);
           } else {
             console.log(`Campaign ${campaignId} count incremented successfully.`);
           }
         } catch (err) {
           console.error('Error during campaign increment fetch:', err);
-          // alert(`Note: An error occurred while updating campaign statistics. Your messages are still being prepared.`);
         }
       }
 
@@ -614,6 +626,56 @@ export default function DraftPreviewPage() {
             </button>
           </div>
         </div>
+        
+        {/* Chrome Extension Helper Modal/Section */}
+        {showExtensionHelper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold mb-4">Complete Web Forms</h2>
+              
+              <ChromeExtensionHelper
+                representatives={representatives
+                  .map((rep, index) => {
+                    const draft = drafts.get(index);
+                    if (draft?.status === 'complete') {
+                      const webformContact = rep.contacts?.find(c => c.type === 'webform');
+                      if (webformContact) {
+                        return {
+                          name: rep.name,
+                          webFormUrl: webformContact.value,
+                        };
+                      }
+                    }
+                    return null;
+                  })
+                  .filter((rep): rep is Representative => rep !== null)
+                }
+                userData={{
+                  // Parse personal info to extract fields
+                  firstName: personalInfo.match(/First Name: (.+)/)?.[1] || '',
+                  lastName: personalInfo.match(/Last Name: (.+)/)?.[1] || '',
+                  email: personalInfo.match(/Email: (.+)/)?.[1] || '',
+                  phone: personalInfo.match(/Phone: (.+)/)?.[1] || '',
+                  address: {
+                    street: localStorage.getItem('userAddress') || '',
+                    // You might want to parse city/state/zip from the address
+                  },
+                  // Get the message from the first complete draft
+                  message: Array.from(drafts.values()).find(d => d.status === 'complete')?.content || '',
+                  subject: Array.from(drafts.values()).find(d => d.status === 'complete')?.subject || '',
+                }}
+                sessionId={Date.now().toString()}
+              />
+              
+              <button
+                onClick={() => setShowExtensionHelper(false)}
+                className="mt-4 px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
