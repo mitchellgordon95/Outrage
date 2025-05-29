@@ -398,12 +398,21 @@ export default function PersonalInfoPage() {
             <h3 className="font-medium text-gray-700 mb-1 text-sm">Age</h3>
             <div className="flex flex-wrap gap-1.5">
               {[
-                "18-24 year old",
-                "25-34 year old",
-                "35-44 year old",
-                "45-54 year old",
-                "55-64 year old",
-                "65+ year old"
+                "Gen Z",
+                "Millennial",
+                "Gen X",
+                "Boomer",
+                "Silent Generation",
+                "Early 20s",
+                "Late 20s",
+                "Early 30s",
+                "Late 30s",
+                "Early 40s",
+                "Late 40s",
+                "50s",
+                "60s",
+                "70s",
+                "80+"
               ].map((item, index) => (
                 <button
                   key={`age-${index}`}

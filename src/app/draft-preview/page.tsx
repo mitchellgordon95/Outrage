@@ -566,7 +566,7 @@ export default function DraftPreviewPage() {
                             }
                             className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90 disabled:bg-gray-400"
                           >
-                            Revise All
+                            Revise All Drafts
                           </button>
                         </div>
                       </div>
