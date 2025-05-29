@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f9fafb;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .logo {
+      width: 32px;
+      height: 32px;
+      margin-right: 12px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #111827;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    
+    .status.connected {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .status.disconnected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .section {
+      margin-bottom: 20px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .session-info {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    
+    .session-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .session-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .label {
+      color: #6b7280;
+    }
+    
+    .value {
+      color: #111827;
+      font-weight: 500;
+    }
+    
+    .no-session {
+      text-align: center;
+      color: #6b7280;
+      padding: 40px 20px;
+      font-size: 14px;
+    }
+    
+    .instructions {
+      background: #eff6ff;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+    
+    .footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .footer a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">O</div>
+    <h1>Outrage Form Filler</h1>
+  </div>
+  
+  <div id="status" class="status disconnected">
+    Checking connection...
+  </div>
+  
+  <div id="content">
+    <div class="no-session">
+      <p>No active form filling session.</p>
+      <p>Start a session from the Outrage app to begin filling representative forms.</p>
+    </div>
+  </div>
+  
+  <div class="instructions">
+    <strong>How to use:</strong><br>
+    1. Generate drafts in the Outrage app<br>
+    2. Click "Fill Web Forms" for representatives with forms<br>
+    3. Review and submit each form that opens
+  </div>
+  
+  <div class="footer">
+    <a href="https://outrage.app" target="_blank">Visit Outrage App</a>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
