@@ -1,14 +1,42 @@
 // Content script injected into representative websites
 console.log('Outrage Form Filler content script loaded');
 
+// Function to wait for a form to appear
+async function waitForForm(timeout = 10000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    const forms = document.querySelectorAll('form');
+    if (forms.length > 0) {
+      return forms;
+    }
+    
+    // Also check for common form containers that might not be <form> tags
+    const formContainers = document.querySelectorAll('[id*="contact"], [class*="contact"], [id*="form"], [class*="form"]');
+    if (formContainers.length > 0) {
+      console.log('Found potential form containers:', formContainers.length);
+    }
+    
+    // Wait a bit before checking again
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  return [];
+}
+
 // Wait for the page to fully load
 window.addEventListener('load', async () => {
-  // Check if this page has a form we should fill
-  const forms = document.querySelectorAll('form');
+  console.log('Page loaded, waiting for forms...');
+  
+  // Wait for forms to appear (they might be loaded dynamically)
+  const forms = await waitForForm();
+  
   if (forms.length === 0) {
-    console.log('No forms found on this page');
+    console.log('No forms found on this page after waiting');
     return;
   }
+  
+  console.log(`Found ${forms.length} forms after page load`);
   
   // Get session data from background script
   chrome.runtime.sendMessage({ action: 'getFormData' }, async (sessionData) => {
@@ -39,17 +67,50 @@ window.addEventListener('load', async () => {
 
 async function fillForm(formAnalysis, userData) {
   console.log('Filling form with analysis:', formAnalysis);
+  console.log('User data:', userData);
+  
+  // Debug: Show all forms on the page
+  const allForms = document.querySelectorAll('form');
+  console.log(`Found ${allForms.length} forms on the page`);
+  allForms.forEach((form, index) => {
+    console.log(`Form ${index}:`, {
+      id: form.id,
+      className: form.className,
+      action: form.action,
+      innerHTML: form.innerHTML.substring(0, 200) + '...'
+    });
+  });
   
   try {
     const { fieldMappings, formSelector = 'form', submitSelector } = formAnalysis;
+    console.log('Looking for form with selector:', formSelector);
     const form = document.querySelector(formSelector);
     
     if (!form) {
-      throw new Error('Form not found with selector: ' + formSelector);
+      // Try to find any form as fallback
+      const anyForm = document.querySelector('form');
+      if (anyForm) {
+        console.warn(`Form not found with selector "${formSelector}", but found a form on the page. Using first form as fallback.`);
+        // Continue with the first form found
+      } else {
+        throw new Error('Form not found with selector: ' + formSelector);
+      }
     }
     
     // Show filling indicator
     showStatus('Filling form...');
+    
+    // Check if fieldMappings exists and is an object
+    if (!fieldMappings || typeof fieldMappings !== 'object') {
+      console.error('Invalid fieldMappings:', fieldMappings);
+      throw new Error('Invalid form analysis: fieldMappings is missing or invalid');
+    }
+    
+    // Use the form we found (either the specified one or the fallback)
+    const formToUse = form || document.querySelector('form');
+    if (!formToUse) {
+      throw new Error('No form found on the page');
+    }
     
     // Fill each mapped field
     for (const [dataKey, fieldInfo] of Object.entries(fieldMappings)) {
@@ -89,10 +150,25 @@ async function fillForm(formAnalysis, userData) {
 
 async function fillField(fieldInfo, value) {
   const { selector, type = 'text', triggerEvents = true } = fieldInfo;
-  const element = document.querySelector(selector);
+  
+  // Try multiple selectors if comma-separated
+  const selectors = selector.split(',').map(s => s.trim());
+  let element = null;
+  
+  for (const sel of selectors) {
+    try {
+      element = document.querySelector(sel);
+      if (element) {
+        console.log(`Found field with selector: ${sel}`);
+        break;
+      }
+    } catch (e) {
+      console.warn(`Invalid selector: ${sel}`, e);
+    }
+  }
   
   if (!element) {
-    console.warn(`Field not found: ${selector}`);
+    console.warn(`Field not found with any selector: ${selector}`);
     return;
   }
   

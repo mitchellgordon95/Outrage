@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
     // Analyze the form with AI
     const formAnalysis = await analyzeFormWithAI(formHtml, userData, representative);
     
+    console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
+    
     return NextResponse.json(formAnalysis, { headers });
   } catch (error) {
     console.error('Form analysis error:', error);
@@ -181,20 +183,51 @@ Rules:
 
 function getFallbackMapping(): FormAnalysis {
   // Common form field patterns as fallback
+  // Using multiple selectors that will be tried in order
   return {
     fieldMappings: {
-      firstName: { selector: "input[name*='first'], #first_name, #fname", type: 'text' },
-      lastName: { selector: "input[name*='last'], #last_name, #lname", type: 'text' },
-      email: { selector: "input[type='email'], input[name*='email'], #email", type: 'email' },
-      phone: { selector: "input[type='tel'], input[name*='phone'], #phone", type: 'tel' },
-      'address.street': { selector: "input[name*='address'], #address1, #street", type: 'text' },
-      'address.city': { selector: "input[name*='city'], #city", type: 'text' },
-      'address.state': { selector: "select[name*='state'], #state", type: 'select' },
-      'address.zip': { selector: "input[name*='zip'], #zip, #postal", type: 'text' },
-      subject: { selector: "input[name*='subject'], #subject", type: 'text' },
-      message: { selector: "textarea[name*='message'], textarea[name*='comment'], #message, #comments", type: 'textarea' },
+      firstName: { 
+        selector: "input[name*='first' i]:not([type='hidden']), input[id*='first' i]:not([type='hidden']), input[placeholder*='first' i]:not([type='hidden'])", 
+        type: 'text' 
+      },
+      lastName: { 
+        selector: "input[name*='last' i]:not([type='hidden']), input[id*='last' i]:not([type='hidden']), input[placeholder*='last' i]:not([type='hidden'])", 
+        type: 'text' 
+      },
+      email: { 
+        selector: "input[type='email'], input[name*='email' i]:not([type='hidden']), input[id*='email' i]:not([type='hidden'])", 
+        type: 'email' 
+      },
+      phone: { 
+        selector: "input[type='tel'], input[name*='phone' i]:not([type='hidden']), input[id*='phone' i]:not([type='hidden']), input[name*='tel' i]:not([type='hidden'])", 
+        type: 'tel' 
+      },
+      'address.street': { 
+        selector: "input[name*='address' i]:not([type='hidden']):not([name*='2']), input[id*='address' i]:not([type='hidden']):not([id*='2']), input[name*='street' i]:not([type='hidden'])", 
+        type: 'text' 
+      },
+      'address.city': { 
+        selector: "input[name*='city' i]:not([type='hidden']), input[id*='city' i]:not([type='hidden'])", 
+        type: 'text' 
+      },
+      'address.state': { 
+        selector: "select[name*='state' i], select[id*='state' i], input[name*='state' i]:not([type='hidden'])", 
+        type: 'select' 
+      },
+      'address.zip': { 
+        selector: "input[name*='zip' i]:not([type='hidden']), input[id*='zip' i]:not([type='hidden']), input[name*='postal' i]:not([type='hidden'])", 
+        type: 'text' 
+      },
+      subject: { 
+        selector: "input[name*='subject' i]:not([type='hidden']), input[id*='subject' i]:not([type='hidden']), select[name*='topic' i], select[id*='topic' i]", 
+        type: 'text' 
+      },
+      message: { 
+        selector: "textarea[name*='message' i], textarea[id*='message' i], textarea[name*='comment' i], textarea[id*='comment' i], textarea[name*='text' i]", 
+        type: 'textarea' 
+      },
     },
     formSelector: 'form',
-    submitSelector: "button[type='submit'], input[type='submit']",
+    submitSelector: "button[type='submit'], input[type='submit'], button:contains('Send'), button:contains('Submit')",
   };
 }
