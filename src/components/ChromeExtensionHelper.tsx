@@ -23,8 +23,10 @@ export default function ChromeExtensionHelper({
   const [filling, setFilling] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   
-  // For development, we'll use a placeholder. In production, this should be set via environment variable
-  const EXTENSION_ID = process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID || 'YOUR_EXTENSION_ID_HERE';
+  // Use different extension IDs for development and production
+  const EXTENSION_ID = process.env.NODE_ENV === 'production' 
+    ? process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD
+    : process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_DEV;
   
   useEffect(() => {
     // Check if extension is installed
@@ -33,6 +35,13 @@ export default function ChromeExtensionHelper({
   
   const checkExtensionInstalled = () => {
     console.log('Checking extension with ID:', EXTENSION_ID);
+    console.log('Environment:', process.env.NODE_ENV);
+    
+    if (!EXTENSION_ID || EXTENSION_ID === 'extension_id') {
+      console.error('Extension ID not properly configured in environment variables');
+      setExtensionInstalled(false);
+      return;
+    }
     
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       // Try to send a test message to the extension
@@ -129,15 +138,21 @@ export default function ChromeExtensionHelper({
         <div className="mb-4 p-3 bg-yellow-100 rounded text-sm">
           <strong>Extension Required:</strong> Install the Outrage Form Filler extension to automatically fill these forms.
           <a 
-            href="#" 
+            href={process.env.NODE_ENV === 'production' 
+              ? `https://chrome.google.com/webstore/detail/${process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD}`
+              : '#'
+            } 
             className="block mt-2 text-blue-600 hover:underline"
             onClick={(e) => {
-              e.preventDefault();
-              // TODO: Add Chrome Web Store link
-              alert('Chrome Web Store link will be added here');
+              if (process.env.NODE_ENV !== 'production') {
+                e.preventDefault();
+                alert('In development: Load the extension from chrome-extension/ folder using Developer Mode in chrome://extensions/');
+              }
             }}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            Install Extension →
+            {process.env.NODE_ENV === 'production' ? 'Install Extension →' : 'Load Development Extension →'}
           </a>
         </div>
       )}
