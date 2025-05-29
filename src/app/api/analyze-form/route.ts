@@ -194,16 +194,48 @@ ${formsHtml}
 
 Your task:
 1. Find the main contact form in the HTML (look for <form> tags)
-2. Identify the actual id, class, or other attributes of the form
-3. Find input fields that match the user data fields
+2. Parse the user's name and address into components:
+   - If "name" field exists, parse it into firstName, lastName, prefix (Mr/Ms/Dr), suffix (Jr/Sr/III)
+   - If "address" field exists, parse it into: address1, address2, city, state, zip
+3. Find input fields that match these parsed components
 4. Return the EXACT selectors as they appear in the HTML
+
+For name parsing:
+- "John Smith" → firstName: "John", lastName: "Smith"
+- "Dr. Jane Doe Jr." → prefix: "Dr.", firstName: "Jane", lastName: "Doe", suffix: "Jr."
+- Some forms may have a single "fullName" field - map the complete name to it
+
+For address parsing:
+- "123 Main St, Apt 4B, New York, NY 10001" → 
+  address1: "123 Main St", address2: "Apt 4B", city: "New York", state: "NY", zip: "10001"
 
 Return a JSON object with this structure:
 {
+  "parsedData": {
+    "firstName": "[parsed first name]",
+    "lastName": "[parsed last name]",
+    "prefix": "[parsed prefix or null]",
+    "suffix": "[parsed suffix or null]",
+    "fullName": "[complete name]",
+    "address1": "[parsed street address]",
+    "address2": "[parsed apt/suite or null]",
+    "city": "[parsed city]",
+    "state": "[parsed state]",
+    "zip": "[parsed zip]",
+    "email": "[from userData]",
+    "phone": "[from userData]"
+  },
   "fieldMappings": {
-    "firstName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
-    "lastName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
-    "email": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.firstName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.lastName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.fullName": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.email": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.phone": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.address1": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.city": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.state": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "parsedData.zip": { "selector": "[actual selector from HTML]", "type": "[field type]" },
+    "subject": { "selector": "[actual selector from HTML]", "type": "text" },
     "message": { "selector": "[actual selector from HTML]", "type": "textarea" }
     // ... only include fields that actually exist in the form
   },
@@ -263,6 +295,30 @@ IMPORTANT:
       if (!analysis.fieldMappings || !analysis.formSelector) {
         console.error('AI response missing required fields:', analysis);
         throw new Error('AI response missing fieldMappings or formSelector');
+      }
+      
+      // If parsedData exists, merge it with the fieldMappings for backward compatibility
+      if (analysis.parsedData) {
+        // Update the fieldMappings to include parsedData
+        const updatedFieldMappings: Record<string, FieldMapping> = {};
+        
+        // Add message field separately if it exists
+        if (analysis.fieldMappings.message) {
+          updatedFieldMappings.message = analysis.fieldMappings.message;
+        }
+        
+        // Process other field mappings
+        for (const [key, value] of Object.entries(analysis.fieldMappings)) {
+          if (key !== 'message') {
+            updatedFieldMappings[key] = value as FieldMapping;
+          }
+        }
+        
+        return {
+          ...analysis,
+          fieldMappings: updatedFieldMappings,
+          parsedData: analysis.parsedData
+        };
       }
       
       return analysis;

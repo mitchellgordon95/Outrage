@@ -22,6 +22,13 @@ export default function ChromeExtensionHelper({
   const [extensionInstalled, setExtensionInstalled] = useState(false);
   const [filling, setFilling] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    email: '',
+    phone: ''
+  });
   
   // Use different extension IDs for development and production
   const EXTENSION_ID = process.env.NODE_ENV === 'production' 
@@ -31,6 +38,36 @@ export default function ChromeExtensionHelper({
   useEffect(() => {
     // Check if extension is installed
     checkExtensionInstalled();
+    
+    // Pre-populate form data from localStorage
+    // Get personal info from draftData
+    const draftDataStr = localStorage.getItem('draftData');
+    if (draftDataStr) {
+      try {
+        const draftData = JSON.parse(draftDataStr);
+        if (draftData.personalInfo) {
+          // Personal info is stored as multi-line string, first line is the name
+          const lines = draftData.personalInfo.split('\n').filter(line => line.trim() !== '');
+          if (lines.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              name: lines[0] || ''
+            }));
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing draft data:', e);
+      }
+    }
+    
+    // Get address from userAddress
+    const storedAddress = localStorage.getItem('userAddress');
+    if (storedAddress) {
+      setFormData(prev => ({
+        ...prev,
+        address: storedAddress
+      }));
+    }
   }, []);
   
   const checkExtensionInstalled = () => {
@@ -82,9 +119,29 @@ export default function ChromeExtensionHelper({
       return;
     }
     
+    // Show form to collect user data
+    setShowForm(true);
+  };
+  
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate required fields only
+    if (!formData.name || !formData.address) {
+      alert('Please fill in your name and address');
+      return;
+    }
+    
     setFilling(true);
+    setShowForm(false);
     
     try {
+      // Merge form data with existing userData
+      const enhancedUserData = {
+        ...userData,
+        ...formData
+      };
+      
       // Send message to extension to start filling forms
       chrome.runtime.sendMessage(
         EXTENSION_ID,
@@ -92,7 +149,7 @@ export default function ChromeExtensionHelper({
           action: 'startFormFilling',
           data: {
             representatives: representatives.filter(rep => rep.webFormUrl),
-            userData,
+            userData: enhancedUserData,
             sessionId
           }
         },
@@ -168,6 +225,90 @@ export default function ChromeExtensionHelper({
       >
         {filling ? 'Opening Forms...' : 'Fill Web Forms'}
       </button>
+      
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Your Contact Information</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide your contact information to fill the representative forms.
+            </p>
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Address *
+                </label>
+                <input
+                  type="text"
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="123 Main St, City, State 12345"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email (optional)
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number (optional)
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+                >
+                  Start Filling Forms
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-md font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       {results.length > 0 && (
         <div className="mt-4">

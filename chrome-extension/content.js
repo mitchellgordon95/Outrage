@@ -82,7 +82,7 @@ async function fillForm(formAnalysis, userData) {
   });
   
   try {
-    const { fieldMappings, formSelector = 'form', submitSelector } = formAnalysis;
+    const { fieldMappings, formSelector = 'form', submitSelector, parsedData } = formAnalysis;
     console.log('Looking for form with selector:', formSelector);
     const form = document.querySelector(formSelector);
     
@@ -99,11 +99,13 @@ async function fillForm(formAnalysis, userData) {
       throw new Error('Invalid form analysis: fieldMappings is missing or invalid');
     }
     
-    // Removed fallback logic - the AI should provide the correct selector
+    // Merge parsedData with userData if it exists
+    const mergedData = parsedData ? { ...userData, parsedData } : userData;
+    console.log('Merged data for form filling:', mergedData);
     
     // Fill each mapped field
     for (const [dataKey, fieldInfo] of Object.entries(fieldMappings)) {
-      const value = getNestedValue(userData, dataKey);
+      const value = getNestedValue(mergedData, dataKey);
       if (value !== undefined && value !== null && value !== '') {
         await fillField(fieldInfo, value);
       }
