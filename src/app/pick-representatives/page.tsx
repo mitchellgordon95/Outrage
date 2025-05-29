@@ -12,7 +12,8 @@ export default function IssueDetailsPage() {
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set()); // For manual selection
-  const [aiSelectedReps, setAiSelectedReps] = useState<Set<number>>(new Set()); // For AI selection
+  const [aiSelectedReps, setAiSelectedReps] = useState<Set<number>>(new Set()); // Original AI picks (immutable)
+  const [aiRefinedReps, setAiRefinedReps] = useState<Set<number>>(new Set()); // User's refined AI selection
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [address, setAddress] = useState('');
@@ -26,7 +27,7 @@ export default function IssueDetailsPage() {
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Get the appropriate selected reps based on current mode
-  const currentSelectedReps = pickMode === 'ai' ? aiSelectedReps : selectedReps;
+  const currentSelectedReps = pickMode === 'ai' ? aiRefinedReps : selectedReps;
 
   useEffect(() => {
     // Get the address from localStorage
@@ -73,13 +74,19 @@ export default function IssueDetailsPage() {
     if (draftData.selectionExplanations && typeof draftData.selectionExplanations === 'object') {
       setSelectionExplanations(draftData.selectionExplanations);
     }
+    
+    // Restore active mode if available
+    if (draftData.activeMode === 'ai' || draftData.activeMode === 'manual') {
+      setPickMode(draftData.activeMode);
+    }
 
     // We'll restore selected reps after fetching representatives
     const manualSelectedRepsSet = new Set(draftData.selectedReps || []);
     const aiSelectedRepsSet = new Set(draftData.aiSelectedReps || []);
+    const aiRefinedRepsSet = new Set(draftData.aiRefinedReps || []);
 
     // Fetch representatives and then restore selection
-    fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet);
+    fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet, aiRefinedRepsSet);
   }, [router]);
   
   // Save state whenever any relevant state changes
@@ -96,12 +103,14 @@ export default function IssueDetailsPage() {
       personalInfo,
       selectedReps: Array.from(selectedReps),
       aiSelectedReps: Array.from(aiSelectedReps),
+      aiRefinedReps: Array.from(aiRefinedReps),
       selectionSummary,
-      selectionExplanations
+      selectionExplanations,
+      activeMode: pickMode
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [demands, personalInfo, selectedReps, aiSelectedReps, address, selectionSummary, selectionExplanations]);
+  }, [demands, personalInfo, selectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode]);
 
   // Auto-trigger AI selection when conditions are met
   useEffect(() => {
@@ -127,6 +136,22 @@ export default function IssueDetailsPage() {
       handlePickForMe();
     }
   }, [pickMode, representatives, aiSelectedReps.size, demands, isLoading, isAiSelecting]);
+  
+  // Update localStorage when mode changes
+  useEffect(() => {
+    if (!address) return; // Don't save if we don't have an address yet
+    
+    // Get existing data
+    const existingData = parseDraftData() || {};
+    
+    // Update active mode in localStorage
+    const updatedData = {
+      ...existingData,
+      activeMode: pickMode
+    };
+    
+    localStorage.setItem('draftData', JSON.stringify(updatedData));
+  }, [pickMode, address]);
 
   // Set up Google Maps autocomplete when editing address
   useEffect(() => {
@@ -184,7 +209,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<unknown>, initialAiSelectedReps?: Set<unknown>) => {
+  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<unknown>, initialAiSelectedReps?: Set<unknown>, initialAiRefinedReps?: Set<unknown>) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -235,10 +260,9 @@ export default function IssueDetailsPage() {
       
       // Restore AI selections if we have them
       let hasValidAiSelections = false;
+      let validAiSelectedReps = new Set<number>();
+      
       if (initialAiSelectedReps && initialAiSelectedReps.size > 0) {
-        // Filter out any invalid indexes
-        const validAiSelectedReps = new Set<number>();
-        
         // Convert to array and filter
         Array.from(initialAiSelectedReps).forEach(item => {
           const index = Number(item);
@@ -251,6 +275,25 @@ export default function IssueDetailsPage() {
           setAiSelectedReps(validAiSelectedReps);
           hasValidAiSelections = true;
         }
+      }
+      
+      // Restore AI refined selections (user's subset of AI picks)
+      if (initialAiRefinedReps && initialAiRefinedReps.size > 0) {
+        const validAiRefinedReps = new Set<number>();
+        
+        Array.from(initialAiRefinedReps).forEach(item => {
+          const index = Number(item);
+          if (!isNaN(index) && index < reps.length) {
+            validAiRefinedReps.add(index);
+          }
+        });
+        
+        if (validAiRefinedReps.size > 0) {
+          setAiRefinedReps(validAiRefinedReps);
+        }
+      } else if (hasValidAiSelections && validAiSelectedReps.size > 0) {
+        // If no refined selection exists but we have AI selections, use the AI selections
+        setAiRefinedReps(new Set(validAiSelectedReps));
       }
       
       // Don't auto-trigger here - let useEffect handle it after state is settled
@@ -280,13 +323,28 @@ export default function IssueDetailsPage() {
     
     // Only allow toggling if the representative has at least one contact method
     if (hasContacts) {
-      const newSelected = new Set(selectedReps);
-      if (newSelected.has(index)) {
-        newSelected.delete(index);
+      if (pickMode === 'ai') {
+        // In AI mode, toggle within the refined selection
+        // But only allow toggling if it's in the original AI selection
+        if (aiSelectedReps.has(index)) {
+          const newRefined = new Set(aiRefinedReps);
+          if (newRefined.has(index)) {
+            newRefined.delete(index);
+          } else {
+            newRefined.add(index);
+          }
+          setAiRefinedReps(newRefined);
+        }
       } else {
-        newSelected.add(index);
+        // In manual mode, toggle in manual selection
+        const newSelected = new Set(selectedReps);
+        if (newSelected.has(index)) {
+          newSelected.delete(index);
+        } else {
+          newSelected.add(index);
+        }
+        setSelectedReps(newSelected);
       }
-      setSelectedReps(newSelected);
     }
   };
   
@@ -353,7 +411,9 @@ export default function IssueDetailsPage() {
       if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
         // Map the filtered indices back to original indices
         const originalIndices = data.selectedIndices.map((idx: number) => indexMap[idx]).filter((idx: number | undefined) => idx !== undefined);
-        setAiSelectedReps(new Set(originalIndices as number[]));
+        const newAiSelection = new Set(originalIndices as number[]);
+        setAiSelectedReps(newAiSelection);
+        setAiRefinedReps(new Set(newAiSelection)); // Initially, refined = original AI picks
         
         // Update summary
         if (data.summary) {
@@ -390,16 +450,17 @@ export default function IssueDetailsPage() {
     setAddress(newAddress);
     setIsEditingAddress(false);
     
-    // Fetch representatives for the new address (clear both selections for new address)
-    fetchRepresentatives(newAddress, new Set(), new Set());
+    // Fetch representatives for the new address (clear all selections for new address)
+    fetchRepresentatives(newAddress, new Set(), new Set(), new Set());
   };
 
   const handleClearSelections = () => {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
-      // Clear both selected representatives
+      // Clear all selected representatives
       setSelectedReps(new Set<number>());
       setAiSelectedReps(new Set<number>());
+      setAiRefinedReps(new Set<number>());
 
       // Clear selection summary and explanations
       setSelectionSummary(null);
@@ -414,6 +475,7 @@ export default function IssueDetailsPage() {
             ...parsedData,
             selectedReps: [],
             aiSelectedReps: [],
+            aiRefinedReps: [],
             selectionSummary: null,
             selectionExplanations: {}
           };
@@ -707,19 +769,27 @@ export default function IssueDetailsPage() {
             {/* Selected Representatives Section - Show only in AI mode */}
             {pickMode === 'ai' && !isLoading && aiSelectedReps.size > 0 && !apiError && (
               <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
-                <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">Selected Representatives</h3>
+                <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">AI Selected Representatives</h3>
                 {/* Show count and unselect all only in AI mode */}
-                {pickMode === 'ai' && aiSelectedReps.size > 0 && (
+                {pickMode === 'ai' && aiRefinedReps.size > 0 && (
                   <div className="flex space-x-2 text-sm mb-3">
                     <span className="px-2 py-1 bg-blue-50 text-primary rounded-full border border-blue-100">
-                      {aiSelectedReps.size} selected
+                      {aiRefinedReps.size} of {aiSelectedReps.size} selected
                     </span>
                     <button
-                      onClick={() => setAiSelectedReps(new Set())}
+                      onClick={() => setAiRefinedReps(new Set())}
                       className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                     >
                       Unselect All
                     </button>
+                    {aiRefinedReps.size < aiSelectedReps.size && (
+                      <button
+                        onClick={() => setAiRefinedReps(new Set(aiSelectedReps))}
+                        className="px-2 py-1 text-primary border border-primary rounded hover:bg-blue-50"
+                      >
+                        Select All AI Picks
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-1">
@@ -745,7 +815,7 @@ export default function IssueDetailsPage() {
                           <input
                             type="checkbox"
                             id={`selected-fixed-rep-${index}`}
-                            checked={true}
+                            checked={aiRefinedReps.has(index)}
                             onChange={() => toggleRepresentative(index)}
                             className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
                           />
