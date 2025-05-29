@@ -100,6 +100,62 @@ async function fetchFormHtml(url: string): Promise<string> {
   }
 }
 
+function extractFormsFromHtml(html: string): string {
+  // Extract all form elements with their content
+  const formRegex = /<form[^>]*>[\s\S]*?<\/form>/gi;
+  const forms = html.match(formRegex) || [];
+  
+  console.log(`Extracting ${forms.length} forms from HTML`);
+  
+  if (forms.length === 0) {
+    console.log('No <form> tags found, looking for form-like structures...');
+    
+    // Heuristic: Look for sections containing multiple input fields
+    // Search for divs/sections that contain input, textarea, or select elements
+    const formLikeRegex = /<(?:div|section)[^>]*(?:class|id)="[^"]*(?:contact|form|message)[^"]*"[^>]*>[\s\S]*?<\/(?:div|section)>/gi;
+    const formLikeSections = html.match(formLikeRegex) || [];
+    
+    // Filter to only sections that actually contain form fields
+    const actualFormSections = formLikeSections.filter(section => {
+      const hasInputs = /<input[^>]*type="(?:text|email|tel|phone|submit)"/i.test(section);
+      const hasTextarea = /<textarea/i.test(section);
+      const hasSelect = /<select/i.test(section);
+      return hasInputs || hasTextarea || hasSelect;
+    });
+    
+    if (actualFormSections.length > 0) {
+      console.log(`Found ${actualFormSections.length} form-like sections`);
+      return actualFormSections.join('\n\n<!-- FORM SECTION -->\n\n');
+    }
+    
+    // Last resort: Find any container with multiple inputs
+    const inputContainerRegex = /<[^>]+>[\s\S]*?(?:<input[^>]*>[\s\S]*?){2,}[\s\S]*?<\/[^>]+>/gi;
+    const inputContainers = html.match(inputContainerRegex) || [];
+    
+    if (inputContainers.length > 0) {
+      console.log(`Found ${inputContainers.length} input containers`);
+      return inputContainers.slice(0, 3).join('\n\n<!-- INPUT CONTAINER -->\n\n');
+    }
+  }
+  
+  // Prioritize forms that look like contact forms
+  const contactForms = forms.filter(form => {
+    const formLower = form.toLowerCase();
+    return formLower.includes('contact') || 
+           formLower.includes('message') || 
+           formLower.includes('email') ||
+           formLower.includes('name');
+  });
+  
+  if (contactForms.length > 0) {
+    console.log(`Using ${contactForms.length} contact-specific forms`);
+    return contactForms.join('\n\n<!-- NEXT FORM -->\n\n');
+  }
+  
+  // Return all forms if no contact-specific ones found
+  return forms.join('\n\n<!-- NEXT FORM -->\n\n');
+}
+
 async function analyzeFormWithAI(
   html: string, 
   userData: any, 
@@ -117,25 +173,24 @@ async function analyzeFormWithAI(
   console.log('=== FORM ANALYSIS REQUEST ===');
   console.log('URL:', url);
   console.log('User Data:', JSON.stringify(userData, null, 2));
-  console.log('HTML Length:', html.length);
-  console.log('HTML Preview (first 500 chars):', html.substring(0, 500));
+  console.log('Full HTML Length:', html.length);
   
-  // Look for forms in the HTML for logging
-  const formMatches = html.match(/<form[^>]*>/gi);
-  console.log('Forms found in HTML:', formMatches?.length || 0);
-  if (formMatches) {
-    formMatches.forEach((form, i) => {
-      console.log(`Form ${i}:`, form);
-    });
+  // Extract just the forms
+  const formsHtml = extractFormsFromHtml(html);
+  console.log('Extracted forms HTML length:', formsHtml.length);
+  console.log('Forms HTML preview:', formsHtml.substring(0, 500) + '...');
+  
+  if (!formsHtml) {
+    throw new Error('No forms or form-like structures found in the HTML');
   }
   
-  const prompt = `Analyze this HTML page and find the contact form. Extract the ACTUAL selectors from the HTML - do not make up or guess selectors.
+  const prompt = `Analyze these HTML forms and find the main contact form. Extract the ACTUAL selectors from the HTML - do not make up or guess selectors.
 
 User Data to Map:
 ${JSON.stringify(userData, null, 2)}
 
-HTML Page:
-${html.substring(0, 15000)}
+Forms Found on Page:
+${formsHtml}
 
 Your task:
 1. Find the main contact form in the HTML (look for <form> tags)
@@ -197,6 +252,19 @@ IMPORTANT:
     try {
       const analysis = JSON.parse(content);
       console.log('Parsed Analysis:', JSON.stringify(analysis, null, 2));
+      
+      // Check if AI returned an error
+      if (analysis.error) {
+        console.error('AI returned an error:', analysis.error);
+        throw new Error(`AI analysis failed: ${analysis.error}`);
+      }
+      
+      // Validate the response has the expected structure
+      if (!analysis.fieldMappings || !analysis.formSelector) {
+        console.error('AI response missing required fields:', analysis);
+        throw new Error('AI response missing fieldMappings or formSelector');
+      }
+      
       return analysis;
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
