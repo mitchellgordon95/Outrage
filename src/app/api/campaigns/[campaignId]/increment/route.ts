@@ -9,6 +9,17 @@ interface IncrementResult {
 export async function POST(request: Request, { params }: { params: { campaignId: string } }) {
   const { campaignId } = params;
 
+  // Get the count from request body (default to 1)
+  let count = 1;
+  try {
+    const body = await request.json();
+    if (body.count && typeof body.count === 'number' && body.count > 0) {
+      count = Math.floor(body.count); // Ensure it's a positive integer
+    }
+  } catch {
+    // If no body or invalid JSON, just use default count of 1
+  }
+
   // Validate campaignId: must be a positive integer
   const id = parseInt(campaignId, 10);
   if (isNaN(id) || id <= 0) {
@@ -30,12 +41,12 @@ export async function POST(request: Request, { params }: { params: { campaignId:
     // SQL query to increment message_sent_count and return the new count
     const query = `
       UPDATE campaigns
-      SET message_sent_count = message_sent_count + 1
+      SET message_sent_count = message_sent_count + $2
       WHERE id = $1
       RETURNING message_sent_count;
     `;
     
-    const result: QueryResult<IncrementResult> = await client.query(query, [id]);
+    const result: QueryResult<IncrementResult> = await client.query(query, [id, count]);
 
     // Check if any row was affected
     if (result.rowCount === 0) {

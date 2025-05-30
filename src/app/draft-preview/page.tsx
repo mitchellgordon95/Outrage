@@ -236,18 +236,24 @@ export default function DraftPreviewPage() {
     setShowExtensionHelper(true);
   };
   
-  const handleEmailsSent = async () => {
+  const handleEmailsSent = async (count?: number) => {
     // Handle campaign increment when emails are sent
     const campaignId = localStorage.getItem('activeCampaignId');
     if (campaignId) {
       localStorage.removeItem('activeCampaignId');
       try {
-        const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
+        const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ count: count || 1 })
+        });
         if (!incrementResponse.ok) {
           const errorData = await incrementResponse.json();
           console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
         } else {
-          console.log(`Campaign ${campaignId} count incremented successfully.`);
+          console.log(`Campaign ${campaignId} count incremented by ${count || 1} successfully.`);
         }
       } catch (err) {
         console.error('Error during campaign increment fetch:', err);

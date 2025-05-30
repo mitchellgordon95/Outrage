@@ -22,7 +22,7 @@ interface ChromeExtensionHelperProps {
   emailRepresentatives?: EmailRepresentative[];
   userData: any;
   sessionId: string;
-  onEmailsSent?: () => void;
+  onEmailsSent?: (count?: number) => void;
 }
 
 export default function ChromeExtensionHelper({ 
@@ -214,6 +214,10 @@ export default function ChromeExtensionHelper({
           } else if (response && response.success) {
             // Successfully opened form page
             console.log('Form page opened successfully');
+            // Increment campaign count for forms
+            if (onEmailsSent) {
+              onEmailsSent(activeWebFormReps.length);
+            }
           } else {
             // Fall back to inline form
             setShowForm(true);
@@ -307,7 +311,7 @@ export default function ChromeExtensionHelper({
     
     setEmailsSent(true);
     if (onEmailsSent) {
-      onEmailsSent();
+      onEmailsSent(activeEmailReps.length);
     }
   };
   
@@ -470,6 +474,10 @@ export default function ChromeExtensionHelper({
                 }, index * 500); // 500ms delay between each window.open call
               }
             });
+            // Increment campaign count for manual forms
+            if (onEmailsSent) {
+              onEmailsSent(activeWebFormReps.length);
+            }
           }}
           className="text-sm text-blue-600 hover:underline"
         >
