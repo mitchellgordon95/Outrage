@@ -45,6 +45,9 @@ export default function ChromeExtensionHelper({
   const [emailsSent, setEmailsSent] = useState(false);
   const [extensionJustDetected, setExtensionJustDetected] = useState(false);
   
+  // Track which reps should use forms instead of email (by rep name)
+  const [useFormForRep, setUseFormForRep] = useState<Set<string>>(new Set());
+  
   // Use different extension IDs for development and production
   const EXTENSION_ID = process.env.NODE_ENV === 'production' 
     ? process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD
@@ -221,18 +224,24 @@ export default function ChromeExtensionHelper({
     
     try {
       // Prepare representatives with their specific draft content in userData
-      const representativesWithData = representatives
-        .filter(rep => rep.webFormUrl)
-        .map(rep => ({
-          ...rep,
-          userData: {
-            ...userData,
-            ...formData,
-            // Include this representative's specific draft content
-            subject: rep.draftSubject || '',
-            message: rep.draftContent || ''
-          }
-        }));
+      const representativesWithData = activeWebFormReps
+        .map(rep => {
+          // Get the draft content from either the original rep or the email rep
+          const emailRep = emailRepresentatives.find(e => e.name === rep.name);
+          const draftSubject = rep.draftSubject || emailRep?.draftSubject || '';
+          const draftContent = rep.draftContent || emailRep?.draftContent || '';
+          
+          return {
+            ...rep,
+            userData: {
+              ...userData,
+              ...formData,
+              // Include this representative's specific draft content
+              subject: draftSubject,
+              message: draftContent
+            }
+          };
+        });
       
       // Send message to extension to start filling forms
       chrome.runtime.sendMessage(
@@ -264,10 +273,10 @@ export default function ChromeExtensionHelper({
   };
   
   const handleSendEmails = () => {
-    if (emailRepresentatives.length === 0) return;
+    if (activeEmailReps.length === 0) return;
     
     // Open mailto links for each email representative
-    emailRepresentatives.forEach((rep, index) => {
+    activeEmailReps.forEach((rep, index) => {
       const mailtoLink = `mailto:${rep.email}?subject=${encodeURIComponent(rep.draftSubject)}&body=${encodeURIComponent(rep.draftContent)}`;
       setTimeout(() => {
         window.open(mailtoLink, '_blank');
@@ -280,25 +289,66 @@ export default function ChromeExtensionHelper({
     }
   };
   
-  const webFormReps = representatives.filter(rep => rep.webFormUrl);
+  // Helper to toggle form/email preference
+  const toggleFormPreference = (repName: string, useForm: boolean) => {
+    setUseFormForRep(prev => {
+      const newSet = new Set(prev);
+      if (useForm) {
+        newSet.add(repName);
+      } else {
+        newSet.delete(repName);
+      }
+      return newSet;
+    });
+  };
   
-  if (webFormReps.length === 0 && emailRepresentatives.length === 0) {
+  // Get which reps can use both methods
+  const repsWithBothMethods = new Set(
+    representatives
+      .filter(rep => rep.webFormUrl && emailRepresentatives.some(e => e.name === rep.name))
+      .map(rep => rep.name)
+  );
+  
+  // Filter email reps (those not moved to forms)
+  const activeEmailReps = emailRepresentatives.filter(
+    rep => !useFormForRep.has(rep.name)
+  );
+  
+  // Get web form reps (original + those moved from email)
+  const activeWebFormReps = representatives.filter(
+    rep => rep.webFormUrl && (
+      !emailRepresentatives.some(e => e.name === rep.name) || // Has no email option
+      useFormForRep.has(rep.name) // User chose form over email
+    )
+  );
+  
+  if (representatives.length === 0 && emailRepresentatives.length === 0) {
     return null;
   }
   
   return (
     <div className="space-y-6">
       {/* Email Section */}
-      {emailRepresentatives.length > 0 && (
+      {activeEmailReps.length > 0 && (
         <div className="p-4 bg-blue-50 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Email Drafts Ready</h3>
           <p className="text-sm text-gray-600 mb-4">
-            {emailRepresentatives.length} email{emailRepresentatives.length > 1 ? 's' : ''} ready to send:
+            {activeEmailReps.length} email{activeEmailReps.length > 1 ? 's' : ''} ready to send:
           </p>
           
-          <ul className="list-disc list-inside mb-4 text-sm">
-            {emailRepresentatives.map((rep, index) => (
-              <li key={index}>{rep.name}</li>
+          <ul className="list-disc list-inside mb-4 text-sm space-y-1">
+            {activeEmailReps.map((rep, index) => (
+              <li key={index} className="flex items-center justify-between">
+                <span>{rep.name}</span>
+                {repsWithBothMethods.has(rep.name) && (
+                  <button
+                    onClick={() => toggleFormPreference(rep.name, true)}
+                    className="text-xs text-blue-600 hover:underline ml-2"
+                  >
+                    Fill Form Instead
+                  </button>
+                )}
+              </li>
             ))}
           </ul>
           
@@ -323,16 +373,26 @@ export default function ChromeExtensionHelper({
       )}
       
       {/* Web Forms Section */}
-      {webFormReps.length > 0 && (
+      {activeWebFormReps.length > 0 && (
         <div className="p-4 bg-blue-50 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Web Forms Required</h3>
           <p className="text-sm text-gray-600 mb-4">
-            {webFormReps.length} representative{webFormReps.length > 1 ? 's' : ''} require{webFormReps.length === 1 ? 's' : ''} web form submission:
+            {activeWebFormReps.length} representative{activeWebFormReps.length > 1 ? 's' : ''} require{activeWebFormReps.length === 1 ? 's' : ''} web form submission:
           </p>
       
-      <ul className="list-disc list-inside mb-4 text-sm">
-        {webFormReps.map((rep, index) => (
-          <li key={index}>{rep.name}</li>
+      <ul className="list-disc list-inside mb-4 text-sm space-y-1">
+        {activeWebFormReps.map((rep, index) => (
+          <li key={index} className="flex items-center justify-between">
+            <span>{rep.name}</span>
+            {repsWithBothMethods.has(rep.name) && useFormForRep.has(rep.name) && (
+              <button
+                onClick={() => toggleFormPreference(rep.name, false)}
+                className="text-xs text-blue-600 hover:underline ml-2"
+              >
+                Send Email Instead
+              </button>
+            )}
+          </li>
         ))}
       </ul>
       
