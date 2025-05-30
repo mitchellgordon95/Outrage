@@ -30,9 +30,30 @@ export default function ActiveCampaignBanner() {
       if (response.ok) {
         const data = await response.json();
         setCampaign({ id: data.id, title: data.title });
+      } else if (response.status === 404) {
+        // Campaign not found - clean up localStorage
+        console.warn(`Campaign ${campaignId} not found, cleaning up localStorage`);
+        localStorage.removeItem('activeCampaignId');
+        
+        // Also clean up draft data
+        const draftData = parseDraftData();
+        if (draftData) {
+          delete draftData.activeCampaignId;
+          delete draftData.campaignPreSelectedReps;
+          localStorage.setItem('draftData', JSON.stringify(draftData));
+        }
       }
     } catch (error) {
       console.error('Error fetching campaign:', error);
+      // On network error, also clean up to avoid stuck state
+      localStorage.removeItem('activeCampaignId');
+      
+      const draftData = parseDraftData();
+      if (draftData) {
+        delete draftData.activeCampaignId;
+        delete draftData.campaignPreSelectedReps;
+        localStorage.setItem('draftData', JSON.stringify(draftData));
+      }
     } finally {
       setIsLoading(false);
     }

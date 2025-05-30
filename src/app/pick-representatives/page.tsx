@@ -25,7 +25,7 @@ export default function IssueDetailsPage() {
   const [selectionSummary, setSelectionSummary] = useState<string | null>(null); // Summary of AI selection
   const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
   const [pickMode, setPickMode] = useState<'ai' | 'manual'>('ai'); // Toggle between AI and manual selection - default to AI
-  const [campaignPreSelectedReps, setCampaignPreSelectedReps] = useState<{id: string; name: string}[]>([]); // Pre-selected reps from campaign
+  const [campaignPreSelectedReps, setCampaignPreSelectedReps] = useState<{id?: string | number; name: string}[]>([]); // Pre-selected reps from campaign
   const [preSelectedIds, setPreSelectedIds] = useState<Set<RepresentativeId>>(new Set()); // IDs of pre-selected reps
   const addressInputRef = useRef<HTMLInputElement>(null);
   
@@ -91,7 +91,10 @@ export default function IssueDetailsPage() {
     
     // Check for pre-selected representatives from campaign
     if (draftData.campaignPreSelectedReps && Array.isArray(draftData.campaignPreSelectedReps)) {
+      console.log('Loading campaign pre-selected reps from draftData:', draftData.campaignPreSelectedReps);
       setCampaignPreSelectedReps(draftData.campaignPreSelectedReps);
+    } else {
+      console.log('No campaign pre-selected reps in draftData');
     }
 
     // We'll restore selected reps after fetching representatives
@@ -100,7 +103,7 @@ export default function IssueDetailsPage() {
     const aiRefinedRepsSet = new Set<RepresentativeId>(draftData.aiRefinedReps || []);
 
     // Fetch representatives and then restore selection
-    fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet, aiRefinedRepsSet);
+    fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet, aiRefinedRepsSet, draftData.campaignPreSelectedReps);
   }, [router]);
   
   // Save state whenever any relevant state changes
@@ -224,7 +227,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<RepresentativeId>, initialAiSelectedReps?: Set<RepresentativeId>, initialAiRefinedReps?: Set<RepresentativeId>) => {
+  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<RepresentativeId>, initialAiSelectedReps?: Set<RepresentativeId>, initialAiRefinedReps?: Set<RepresentativeId>, campaignPreSelected?: {id?: string | number; name: string}[]) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -254,21 +257,49 @@ export default function IssueDetailsPage() {
       
       setRepresentatives(reps);
       
+      // Log all fetched representative IDs for debugging
+      console.log('All fetched representative IDs:', reps.map(r => ({ id: r.id, name: r.name, type: typeof r.id })));
+      
       // Handle pre-selected representatives from campaign
-      if (campaignPreSelectedReps.length > 0) {
+      const preSelectedRepsToUse = campaignPreSelected || campaignPreSelectedReps;
+      if (preSelectedRepsToUse && preSelectedRepsToUse.length > 0) {
+        console.log('Campaign pre-selected reps:', preSelectedRepsToUse);
         const preSelectedIdsSet = new Set<RepresentativeId>();
         
         // Find IDs of pre-selected representatives in the fetched list
-        campaignPreSelectedReps.forEach(preSelectedRep => {
-          const foundRep = reps.find(rep => 
-            rep.id === preSelectedRep.id || 
-            (rep.name === preSelectedRep.name && rep.name !== '')
-          );
+        preSelectedRepsToUse.forEach(preSelectedRep => {
+          console.log('Looking for pre-selected rep:', preSelectedRep);
+          
+          // First try to match by ID if available
+          let foundRep = null;
+          if (preSelectedRep.id !== undefined) {
+            // Convert both to strings for comparison since DB stores as int but API returns as string
+            const preSelectedIdStr = String(preSelectedRep.id);
+            console.log(`Trying to match ID: ${preSelectedIdStr}`);
+            foundRep = reps.find(rep => {
+              if (rep.id) {
+                console.log(`  Comparing with rep.id: ${rep.id} (type: ${typeof rep.id})`);
+              }
+              return rep.id === preSelectedIdStr;
+            });
+          }
+          
+          // If not found by ID, try to match by name (case-insensitive)
+          if (!foundRep && preSelectedRep.name) {
+            foundRep = reps.find(rep => 
+              rep.name && rep.name.toLowerCase().trim() === preSelectedRep.name.toLowerCase().trim()
+            );
+          }
+          
+          console.log('Found matching rep:', foundRep);
           if (foundRep && foundRep.id) {
             preSelectedIdsSet.add(foundRep.id);
+          } else {
+            console.log('WARNING: Could not find rep in current list:', preSelectedRep);
           }
         });
         
+        console.log('Pre-selected IDs set:', Array.from(preSelectedIdsSet));
         setPreSelectedIds(preSelectedIdsSet);
         
         // Add pre-selected IDs to manual selections
@@ -508,7 +539,7 @@ export default function IssueDetailsPage() {
     setIsEditingAddress(false);
     
     // Fetch representatives for the new address (clear all selections for new address)
-    fetchRepresentatives(newAddress, new Set(), new Set(), new Set());
+    fetchRepresentatives(newAddress, new Set(), new Set(), new Set(), []);
   };
 
   const handleClearSelections = () => {
@@ -726,9 +757,19 @@ export default function IssueDetailsPage() {
               {/* Show message if there are pre-selected representatives from campaign */}
               {campaignPreSelectedReps.length > 0 && (
                 <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-md">
-                  <p className="text-sm text-purple-700">
-                    This campaign includes {campaignPreSelectedReps.length} pre-selected representative{campaignPreSelectedReps.length > 1 ? 's' : ''} that cannot be removed.
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm text-purple-700 font-medium">
+                        Campaign-selected representatives ({campaignPreSelectedReps.length})
+                      </p>
+                      <p className="text-xs text-purple-600 mt-0.5">
+                        These representatives were chosen by the campaign creator and will be included automatically.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
               
@@ -881,7 +922,9 @@ export default function IssueDetailsPage() {
                     if (!rep) return null;
                     
                     return (
-                      <div key={`selected-fixed-${repId}`} className="p-2 bg-white border border-primary rounded-md">
+                      <div key={`selected-fixed-${repId}`} className={`p-2 border rounded-md ${
+                        preSelectedIds.has(repId) ? 'bg-purple-50 border-purple-300' : 'bg-white border-primary'
+                      }`}>
                         <div className="flex items-start">
                           <input
                             type="checkbox"
@@ -890,7 +933,7 @@ export default function IssueDetailsPage() {
                             onChange={() => toggleRepresentative(repId)}
                             disabled={preSelectedIds.has(repId)}
                             className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
-                            title={preSelectedIds.has(repId) ? "Pre-selected representatives cannot be unselected" : ""}
+                            title={preSelectedIds.has(repId) ? "This representative was selected by the campaign creator and cannot be removed" : ""}
                           />
                           <div className="mr-2 flex-shrink-0">
                             {rep.photoUrl ? (
@@ -920,9 +963,14 @@ export default function IssueDetailsPage() {
                               <div className="flex items-center gap-1">
                                 <h3 className="font-medium text-primary truncate">{rep.name}</h3>
                                 {preSelectedIds.has(repId) && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
-                                    Pre-selected
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                                      Campaign pick
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                               {rep.party && (
@@ -1053,6 +1101,7 @@ export default function IssueDetailsPage() {
                               key={repId} 
                               className={`p-2 border rounded-md ${
                                 !hasContacts ? 'opacity-60 bg-gray-50' :
+                                preSelectedIds.has(repId) ? 'bg-purple-50 border-purple-300' :
                                 isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
                               }`}
                             >
@@ -1064,7 +1113,7 @@ export default function IssueDetailsPage() {
                                   onChange={() => toggleRepresentative(repId)}
                                   disabled={!hasContacts || preSelectedIds.has(repId)}
                                   className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
-                                  title={preSelectedIds.has(repId) ? "Pre-selected representatives cannot be unselected" : ""}
+                                  title={preSelectedIds.has(repId) ? "This representative was selected by the campaign creator and cannot be removed" : ""}
                                 />
                                 <div className="mr-2 flex-shrink-0">
                                   {rep.photoUrl ? (
@@ -1094,9 +1143,14 @@ export default function IssueDetailsPage() {
                                     <div className="flex items-center gap-1">
                                       <h3 className="font-medium truncate">{rep.name}</h3>
                                       {preSelectedIds.has(repId) && (
-                                        <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
-                                          Pre-selected
-                                        </span>
+                                        <div className="flex items-center gap-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                          </svg>
+                                          <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                                            Campaign pick
+                                          </span>
+                                        </div>
                                       )}
                                     </div>
                                     {rep.party && (
@@ -1181,7 +1235,7 @@ export default function IssueDetailsPage() {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => fetchRepresentatives(address)}
+                    onClick={() => fetchRepresentatives(address, manualSelectedReps, aiSelectedReps, aiRefinedReps, campaignPreSelectedReps)}
                     className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
                   >
                     Retry
