@@ -229,112 +229,27 @@ export default function DraftPreviewPage() {
     type: string;
   }
 
-  const handleSendMessages = async () => { // Made async
+  const handleSendMessages = async () => {
+    // Simply show the extension helper modal
+    // The modal will handle both emails and web forms
+    setShowExtensionHelper(true);
+  };
+  
+  const handleEmailsSent = async () => {
+    // Handle campaign increment when emails are sent
     const campaignId = localStorage.getItem('activeCampaignId');
-
-    // Separate representatives by contact type
-    const emailReps: Array<{rep: Representative, draft: RepresentativeDraft}> = [];
-    const webFormReps: Array<{rep: Representative, draft: RepresentativeDraft}> = [];
-    const socialMediaLinks: LinkToOpen[] = [];
-    
-    representatives.forEach((rep: Representative, index: number) => {
-      const draft = drafts.get(index);
-      if (draft?.status === 'complete' && rep.contacts && rep.contacts.length > 0) {
-        // Look for contact methods
-        const emailContact = rep.contacts.find(contact => contact.type === 'email');
-        const webformContact = rep.contacts.find(contact => contact.type === 'webform');
-        const twitterContact = rep.contacts.find(contact => contact.type === 'twitter');
-        
-        // Categorize representatives
-        if (emailContact) {
-          emailReps.push({ rep: { ...rep, email: emailContact.value }, draft });
-        } else if (webformContact) {
-          webFormReps.push({ rep: { ...rep, webFormUrl: webformContact.value }, draft });
+    if (campaignId) {
+      localStorage.removeItem('activeCampaignId');
+      try {
+        const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
+        if (!incrementResponse.ok) {
+          const errorData = await incrementResponse.json();
+          console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
+        } else {
+          console.log(`Campaign ${campaignId} count incremented successfully.`);
         }
-        
-        // Add social media links for posting (optional)
-        if (twitterContact) {
-          // Create a Twitter intent URL with pre-filled content
-          const tweetText = `@${twitterContact.value.replace('@', '')} ${draft.subject}\n\n${draft.content.substring(0, 240)}...`;
-          const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-          socialMediaLinks.push({ url: tweetUrl, name: rep.name, type: 'twitter' });
-        }
-      }
-    });
-    
-    if (emailReps.length === 0 && webFormReps.length === 0) {
-      alert("No contact methods available for your selected representatives.");
-      return;
-    }
-    
-    // If there are web forms, show the extension helper
-    if (webFormReps.length > 0) {
-      setShowExtensionHelper(true);
-      // Don't return here - we still need to handle emails!
-    }
-    
-    // Handle emails and social media
-    const linksToOpen: LinkToOpen[] = [];
-    
-    emailReps.forEach(({ rep, draft }) => {
-      const mailtoLink = `mailto:${rep.email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`;
-      linksToOpen.push({ url: mailtoLink, name: rep.name, type: 'email' });
-    });
-    
-    linksToOpen.push(...socialMediaLinks);
-    
-    // Only process email/social links if we have them
-    if (linksToOpen.length > 0) {
-      // Show confirmation with count of tabs to be opened
-      const emailCount = emailReps.length;
-      const twitterCount = socialMediaLinks.filter(link => link.type === 'twitter').length;
-      const webFormCount = webFormReps.length;
-      
-      const confirmMessage = `This will open:\n` + 
-        (emailCount > 0 ? `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` : '') +
-        (twitterCount > 0 ? `${twitterCount} Twitter ${twitterCount === 1 ? 'post' : 'posts'}\n` : '') +
-        (webFormCount > 0 ? `\nPlus ${webFormCount} web ${webFormCount === 1 ? 'form' : 'forms'} via the Chrome extension\n` : '') +
-        `\nYour browser may block popups. Please allow popups for this site.`;
-      
-      if (confirm(confirmMessage)) {
-        // Increment campaign counter if activeCampaignId exists
-        if (campaignId) {
-          localStorage.removeItem('activeCampaignId'); // Remove immediately
-          try {
-            const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
-            if (!incrementResponse.ok) {
-              const errorData = await incrementResponse.json();
-              console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
-            } else {
-              console.log(`Campaign ${campaignId} count incremented successfully.`);
-            }
-          } catch (err) {
-            console.error('Error during campaign increment fetch:', err);
-          }
-        }
-
-        // Open each link with a slight delay to avoid popup blockers
-        linksToOpen.forEach((link: LinkToOpen, i: number) => {
-          setTimeout(() => {
-            window.open(link.url, '_blank');
-          }, i * 500); // 500ms delay between each window.open call
-        });
-      }
-    } else if (webFormReps.length > 0) {
-      // Only web forms, no emails - still need to handle campaign increment
-      if (campaignId) {
-        localStorage.removeItem('activeCampaignId');
-        try {
-          const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
-          if (!incrementResponse.ok) {
-            const errorData = await incrementResponse.json();
-            console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
-          } else {
-            console.log(`Campaign ${campaignId} count incremented successfully.`);
-          }
-        } catch (err) {
-          console.error('Error during campaign increment fetch:', err);
-        }
+      } catch (err) {
+        console.error('Error during campaign increment fetch:', err);
       }
     }
   };
@@ -652,7 +567,7 @@ export default function DraftPreviewPage() {
         {showExtensionHelper && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">Complete Web Forms</h2>
+              <h2 className="text-xl font-bold mb-4">Send Messages</h2>
               
               <ChromeExtensionHelper
                 representatives={representatives
@@ -674,11 +589,30 @@ export default function DraftPreviewPage() {
                   })
                   .filter((rep): rep is Representative => rep !== null)
                 }
+                emailRepresentatives={representatives
+                  .map((rep, index) => {
+                    const draft = drafts.get(index);
+                    if (draft?.status === 'complete') {
+                      const emailContact = rep.contacts?.find(c => c.type === 'email');
+                      if (emailContact) {
+                        return {
+                          name: rep.name,
+                          email: emailContact.value,
+                          draftSubject: draft.subject,
+                          draftContent: draft.content,
+                        };
+                      }
+                    }
+                    return null;
+                  })
+                  .filter((rep): rep is NonNullable<typeof rep> => rep !== null)
+                }
                 userData={{
                   // Don't pre-fill here - let the ChromeExtensionHelper form collect the data
                   // The form will merge this with user-entered data
                 }}
                 sessionId={Date.now().toString()}
+                onEmailsSent={handleEmailsSent}
               />
               
               <button

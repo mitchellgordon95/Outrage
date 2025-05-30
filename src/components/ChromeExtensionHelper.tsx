@@ -10,16 +10,27 @@ interface Representative {
   draftContent?: string;
 }
 
+interface EmailRepresentative {
+  name: string;
+  email: string;
+  draftSubject: string;
+  draftContent: string;
+}
+
 interface ChromeExtensionHelperProps {
   representatives: Representative[];
+  emailRepresentatives?: EmailRepresentative[];
   userData: any;
   sessionId: string;
+  onEmailsSent?: () => void;
 }
 
 export default function ChromeExtensionHelper({ 
   representatives, 
+  emailRepresentatives = [],
   userData, 
-  sessionId 
+  sessionId,
+  onEmailsSent
 }: ChromeExtensionHelperProps) {
   const [extensionInstalled, setExtensionInstalled] = useState(false);
   const [filling, setFilling] = useState(false);
@@ -31,6 +42,7 @@ export default function ChromeExtensionHelper({
     email: '',
     phone: ''
   });
+  const [emailsSent, setEmailsSent] = useState(false);
   
   // Use different extension IDs for development and production
   const EXTENSION_ID = process.env.NODE_ENV === 'production' 
@@ -221,18 +233,72 @@ export default function ChromeExtensionHelper({
     }
   };
   
+  const handleSendEmails = () => {
+    if (emailRepresentatives.length === 0) return;
+    
+    // Open mailto links for each email representative
+    emailRepresentatives.forEach((rep, index) => {
+      const mailtoLink = `mailto:${rep.email}?subject=${encodeURIComponent(rep.draftSubject)}&body=${encodeURIComponent(rep.draftContent)}`;
+      setTimeout(() => {
+        window.open(mailtoLink, '_blank');
+      }, index * 500); // 500ms delay between each window.open call
+    });
+    
+    setEmailsSent(true);
+    if (onEmailsSent) {
+      onEmailsSent();
+    }
+  };
+  
   const webFormReps = representatives.filter(rep => rep.webFormUrl);
   
-  if (webFormReps.length === 0) {
+  if (webFormReps.length === 0 && emailRepresentatives.length === 0) {
     return null;
   }
   
   return (
-    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-      <h3 className="text-lg font-semibold mb-2">Web Forms Required</h3>
-      <p className="text-sm text-gray-600 mb-4">
-        {webFormReps.length} representative{webFormReps.length > 1 ? 's' : ''} require{webFormReps.length === 1 ? 's' : ''} web form submission:
-      </p>
+    <div className="space-y-6">
+      {/* Email Section */}
+      {emailRepresentatives.length > 0 && (
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">Email Drafts Ready</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {emailRepresentatives.length} email{emailRepresentatives.length > 1 ? 's' : ''} ready to send:
+          </p>
+          
+          <ul className="list-disc list-inside mb-4 text-sm">
+            {emailRepresentatives.map((rep, index) => (
+              <li key={index}>{rep.name}</li>
+            ))}
+          </ul>
+          
+          <button
+            onClick={handleSendEmails}
+            disabled={emailsSent}
+            className={`px-4 py-2 rounded font-medium ${
+              !emailsSent
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {emailsSent ? '✓ Emails Opened' : 'Send Emails'}
+          </button>
+          
+          {emailsSent && (
+            <p className="text-sm text-green-600 mt-2">
+              Email drafts have been opened in your email client.
+            </p>
+          )}
+        </div>
+      )}
+      
+      {/* Web Forms Section */}
+      {webFormReps.length > 0 && (
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">Web Forms Required</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {webFormReps.length} representative{webFormReps.length > 1 ? 's' : ''} require{webFormReps.length === 1 ? 's' : ''} web form submission:
+          </p>
       
       <ul className="list-disc list-inside mb-4 text-sm">
         {webFormReps.map((rep, index) => (
@@ -360,20 +426,22 @@ export default function ChromeExtensionHelper({
         </div>
       )}
       
-      {results.length > 0 && (
-        <div className="mt-4">
-          <h4 className="font-medium mb-2">Results:</h4>
-          <ul className="text-sm space-y-1">
-            {results.map((result, index) => (
-              <li key={index} className="flex items-center gap-2">
-                <span className={result.status === 'opened' ? 'text-green-600' : 'text-red-600'}>
-                  {result.status === 'opened' ? '✓' : '✗'}
-                </span>
-                {result.representative}
-                {result.error && <span className="text-red-600 text-xs">({result.error})</span>}
-              </li>
-            ))}
-          </ul>
+          {results.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-medium mb-2">Results:</h4>
+              <ul className="text-sm space-y-1">
+                {results.map((result, index) => (
+                  <li key={index} className="flex items-center gap-2">
+                    <span className={result.status === 'opened' ? 'text-green-600' : 'text-red-600'}>
+                      {result.status === 'opened' ? '✓' : '✗'}
+                    </span>
+                    {result.representative}
+                    {result.error && <span className="text-red-600 text-xs">({result.error})</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
