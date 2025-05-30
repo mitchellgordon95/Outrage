@@ -16,7 +16,9 @@ export default function CreateCampaignPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localStorageLoaded, setLocalStorageLoaded] = useState(false);
+  const [isGeneratingInfo, setIsGeneratingInfo] = useState(false);
   const isInitialLoadDone = useRef(false);
+  const hasGeneratedInfo = useRef(false);
 
   useEffect(() => {
     const draftData = parseDraftData();
@@ -51,6 +53,40 @@ export default function CreateCampaignPage() {
       isInitialLoadDone.current = true;
     }
   }, [representatives]);
+
+  // Generate campaign title and description when demands are loaded
+  useEffect(() => {
+    const generateCampaignInfo = async () => {
+      if (demands.length > 0 && !hasGeneratedInfo.current && !title && !description) {
+        hasGeneratedInfo.current = true;
+        setIsGeneratingInfo(true);
+        
+        try {
+          const response = await fetch('/api/generate-campaign-info', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ demands }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setTitle(data.title || '');
+            setDescription(data.description || '');
+          } else {
+            console.error('Failed to generate campaign info');
+          }
+        } catch (error) {
+          console.error('Error generating campaign info:', error);
+        } finally {
+          setIsGeneratingInfo(false);
+        }
+      }
+    };
+
+    generateCampaignInfo();
+  }, [demands, title, description]);
 
   // Effect to save changes to localStorage
   useEffect(() => {
@@ -169,7 +205,8 @@ export default function CreateCampaignPage() {
           </div>
 
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Selected Representatives:</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Pre-Selected Representatives:</h2>
+            <p className="text-sm text-gray-600 mb-3">Users can add more</p>
             {representatives.length > 0 ? (
               <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
                 {representatives.map((rep, index) => (
@@ -198,28 +235,54 @@ export default function CreateCampaignPage() {
           <div className="mb-4">
             <label htmlFor="campaignTitle" className="block text-lg font-medium text-gray-700 mb-1">
               Campaign Title <span className="text-red-500">*</span>
+              {isGeneratingInfo && (
+                <span className="ml-2 text-sm text-gray-500 italic">
+                  (AI generating suggestion...)
+                </span>
+              )}
             </label>
-            <input
-              type="text"
-              id="campaignTitle"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
-              required
-            />
+            <div className="relative">
+              <input
+                type="text"
+                id="campaignTitle"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+                required
+                disabled={isGeneratingInfo}
+              />
+              {isGeneratingInfo && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
             <label htmlFor="campaignDescription" className="block text-lg font-medium text-gray-700 mb-1">
               Campaign Description (Optional)
+              {isGeneratingInfo && (
+                <span className="ml-2 text-sm text-gray-500 italic">
+                  (AI generating suggestion...)
+                </span>
+              )}
             </label>
-            <textarea
-              id="campaignDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
-            />
+            <div className="relative">
+              <textarea
+                id="campaignDescription"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+                disabled={isGeneratingInfo}
+              />
+              {isGeneratingInfo && (
+                <div className="absolute right-3 top-3">
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (
