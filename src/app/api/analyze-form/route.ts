@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
+import crypto from 'crypto';
 
 // Form field mapping types
 interface FieldMapping {
@@ -11,6 +13,23 @@ interface FormAnalysis {
   fieldMappings: Record<string, FieldMapping>;
   formSelector?: string;
   submitSelector?: string;
+  parsedData?: any;
+}
+
+// Create a deterministic cache key from URL and user data
+function createCacheKey(url: string, userData: any): string {
+  const data = {
+    url: url.toLowerCase().trim(),
+    // Sort user data keys for consistency
+    userData: Object.keys(userData).sort().reduce((acc, key) => {
+      acc[key] = userData[key];
+      return acc;
+    }, {} as any)
+  };
+  
+  const hash = crypto.createHash('sha256');
+  hash.update(JSON.stringify(data));
+  return hash.digest('hex');
 }
 
 export async function POST(request: NextRequest) {
@@ -38,15 +57,30 @@ export async function POST(request: NextRequest) {
 
     console.log('Analyzing form at:', url);
     
-    // Fetch the form HTML
-    const formHtml = await fetchFormHtml(url);
-    
-    // Analyze the form with AI
-    const formAnalysis = await analyzeFormWithAI(formHtml, userData, representative, url);
-    
-    console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
-    
-    return NextResponse.json(formAnalysis, { headers });
+    try {
+      // Create cache key from URL and user data
+      const cacheKey = createCacheKey(url, userData);
+      console.log(`Cache key generated: ${cacheKey.substring(0, 8)}...`);
+      
+      // Try to get cached analysis
+      const formAnalysis = await getCachedFormAnalysis(cacheKey, url, userData, representative);
+      
+      console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
+      
+      // Add cache status to response headers
+      const response = NextResponse.json(formAnalysis, { headers });
+      response.headers.set('X-Cache-Status', formAnalysis._cacheHit ? 'HIT' : 'MISS');
+      
+      // Remove internal cache flag before sending response
+      if (formAnalysis._cacheHit) {
+        delete formAnalysis._cacheHit;
+      }
+      
+      return response;
+    } catch (error) {
+      // Don't cache errors - throw them directly
+      throw error;
+    }
   } catch (error) {
     console.error('Form analysis error:', error);
     return NextResponse.json(
@@ -155,6 +189,36 @@ function extractFormsFromHtml(html: string): string {
   // Return all forms if no contact-specific ones found
   return forms.join('\n\n<!-- NEXT FORM -->\n\n');
 }
+
+// Core form analysis function (non-cached)
+async function analyzeFormCore(
+  url: string,
+  userData: any,
+  representative: any
+): Promise<FormAnalysis> {
+  // Fetch the form HTML
+  const html = await fetchFormHtml(url);
+  
+  return analyzeFormWithAI(html, userData, representative, url);
+}
+
+// Cached version of form analysis
+// Cache for 7 days since form structures rarely change
+const getCachedFormAnalysis = unstable_cache(
+  async (cacheKey: string, url: string, userData: any, representative: any): Promise<FormAnalysis> => {
+    console.log(`[CACHE MISS] Analyzing form for cache key: ${cacheKey.substring(0, 8)}...`);
+    
+    const analysis = await analyzeFormCore(url, userData, representative);
+    
+    // Add cache hit flag for internal use
+    return { ...analysis, _cacheHit: false };
+  },
+  ['form-analysis'], // cache key prefix
+  {
+    revalidate: 604800, // 7 days in seconds
+    tags: ['forms'] // allows manual cache invalidation if needed
+  }
+);
 
 async function analyzeFormWithAI(
   html: string, 
