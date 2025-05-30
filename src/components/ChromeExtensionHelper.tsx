@@ -168,8 +168,19 @@ export default function ChromeExtensionHelper({
     
     try {
       // Prepare session data with pre-filled values
+      // Only include representatives that should use web forms
+      const webFormRepsWithDrafts = activeWebFormReps.map(rep => {
+        // Get the draft content from either the original rep or the email rep
+        const emailRep = emailRepresentatives.find(e => e.name === rep.name);
+        return {
+          ...rep,
+          draftSubject: rep.draftSubject || emailRep?.draftSubject || '',
+          draftContent: rep.draftContent || emailRep?.draftContent || ''
+        };
+      });
+      
       const sessionData = {
-        representatives,
+        representatives: webFormRepsWithDrafts,
         sessionId,
         prefilledData: {
           name: formData.name,
