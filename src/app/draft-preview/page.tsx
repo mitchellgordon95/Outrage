@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Representative } from '@/services/representatives';
 import { parseDraftData, getProgressState } from '@/utils/navigation';
 import ChromeExtensionHelper from '@/components/ChromeExtensionHelper';
+import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 // Type for generated draft
 interface RepresentativeDraft {
@@ -339,6 +340,9 @@ export default function DraftPreviewPage() {
             </div>
           </div>
         </div>
+        
+        {/* Active Campaign Banner */}
+        <ActiveCampaignBanner />
         
         <h1 className="text-2xl font-bold mb-6">Email Draft Preview</h1>
         

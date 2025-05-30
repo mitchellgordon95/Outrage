@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseDraftData, getProgressState } from '@/utils/navigation';
+import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function PersonalInfoPage() {
   const router = useRouter();
@@ -256,6 +257,9 @@ export default function PersonalInfoPage() {
             </div>
           </div>
         </div>
+        
+        {/* Active Campaign Banner */}
+        <ActiveCampaignBanner />
         
         {/* Address display */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">

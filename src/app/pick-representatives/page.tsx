@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Representative, getRepresentativesByAddress } from '@/services/representatives';
 import { parseDraftData, getProgressState } from '@/utils/navigation';
+import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function IssueDetailsPage() {
   const router = useRouter();
@@ -637,6 +638,10 @@ export default function IssueDetailsPage() {
             </div>
           </div>
         </div>
+        
+        {/* Active Campaign Banner */}
+        <ActiveCampaignBanner />
+        
         {/* Address display with change button */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">
           {isEditingAddress ? (

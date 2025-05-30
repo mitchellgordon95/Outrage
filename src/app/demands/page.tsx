@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseDraftData } from '@/utils/navigation';
 import IssueCategory from '@/components/IssueCategory';
+import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function DemandsPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function DemandsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
+  const [hasCampaign, setHasCampaign] = useState(false);
   // No longer need expandedCategories as the component handles this internally
   
   useEffect(() => {
@@ -33,6 +35,10 @@ export default function DemandsPage() {
         setDemands(draftData.demands);
       }
     }
+    
+    // Check if using a campaign
+    const activeCampaignId = localStorage.getItem('activeCampaignId');
+    setHasCampaign(!!activeCampaignId);
   }, [router]);
   
   // Save state whenever any relevant state changes
@@ -131,6 +137,9 @@ export default function DemandsPage() {
       </header>
       
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
+        {/* Active Campaign Banner */}
+        <ActiveCampaignBanner />
+        
         {/* Address display */}
         <div className="mb-6 p-4 bg-gray-100 rounded-md">
           <div className="flex justify-between items-center">
@@ -148,17 +157,21 @@ export default function DemandsPage() {
         </div>
         
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">What Do You Care About?</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {hasCampaign ? 'Campaign Demands' : 'What Do You Care About?'}
+          </h2>
           <p className="text-gray-600 mb-6">
-            Enter specific demands or issues you want your elected officials to address.
-            Feel free to be informal and direct - short, passionate statements often work best!
+            {hasCampaign 
+              ? 'These are the demands included in this campaign. They cannot be modified while using the campaign.'
+              : 'Enter specific demands or issues you want your elected officials to address. Feel free to be informal and direct - short, passionate statements often work best!'
+            }
           </p>
 
           <div className="space-y-3 mb-2">
             {demands.length > 0 ? (
               demands.map((demand, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-1">
-                  {editingIndex === index ? (
+                <div key={index} className={`flex items-center gap-2 ${hasCampaign ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'} border rounded-md p-1`}>
+                  {editingIndex === index && !hasCampaign ? (
                     <>
                       <input
                         type="text"
@@ -193,20 +206,24 @@ export default function DemandsPage() {
                   ) : (
                     <>
                       <p className="flex-1 p-2 font-medium text-gray-800">{demand}</p>
-                      <button
-                        onClick={() => handleStartEdit(index)}
-                        className="p-2 text-blue-600 hover:text-blue-800"
-                        title="Edit"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        onClick={() => handleRemoveDemand(index)}
-                        className="p-2 text-red-500 hover:text-red-700"
-                        title="Delete"
-                      >
-                        ✕
-                      </button>
+                      {!hasCampaign && (
+                        <>
+                          <button
+                            onClick={() => handleStartEdit(index)}
+                            className="p-2 text-blue-600 hover:text-blue-800"
+                            title="Edit"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => handleRemoveDemand(index)}
+                            className="p-2 text-red-500 hover:text-red-700"
+                            title="Delete"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -218,16 +235,21 @@ export default function DemandsPage() {
             )}
           </div>
 
-          {/* Add Custom Demand button */}
-          <button
-            onClick={handleAddDemand}
-            className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
-          >
-            + Add Custom Demand
-          </button>
+          {/* Add Custom Demand button - only show when not using campaign */}
+          {!hasCampaign && (
+            <button
+              onClick={handleAddDemand}
+              className="mb-6 py-2 px-4 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              + Add Custom Demand
+            </button>
+          )}
 
-          {/* Economy Category */}
-          <IssueCategory
+          {/* Issue Categories - only show when not using campaign */}
+          {!hasCampaign && (
+            <>
+              {/* Economy Category */}
+              <IssueCategory
             title="Economy & Business"
             category="economy"
             previewIssues={[
@@ -370,7 +392,9 @@ export default function DemandsPage() {
             onIssueClick={addIssue}
           />
 
-          {/* Custom demands section removed */}
+              {/* Custom demands section removed */}
+            </>
+          )}
         </div>
         
         {/* Navigation progress */}
@@ -400,13 +424,15 @@ export default function DemandsPage() {
 
         {/* Action Buttons */}
         <div className="mt-8 mb-4 flex gap-4">
-          {/* Clear Form Button */}
-          <button
-            onClick={handleClearForm}
-            className="py-3 px-6 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
-          >
-            Clear Demands
-          </button>
+          {/* Clear Form Button - only show when not using campaign */}
+          {!hasCampaign && (
+            <button
+              onClick={handleClearForm}
+              className="py-3 px-6 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
+            >
+              Clear Demands
+            </button>
+          )}
 
           {/* Continue Button */}
           <button
