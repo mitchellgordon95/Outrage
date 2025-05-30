@@ -27,6 +27,7 @@ export default function IssueDetailsPage() {
   const [pickMode, setPickMode] = useState<'ai' | 'manual'>('ai'); // Toggle between AI and manual selection - default to AI
   const [campaignPreSelectedReps, setCampaignPreSelectedReps] = useState<{id?: string | number; name: string}[]>([]); // Pre-selected reps from campaign
   const [preSelectedIds, setPreSelectedIds] = useState<Set<RepresentativeId>>(new Set()); // IDs of pre-selected reps
+  const [demandsUsedForAiSelection, setDemandsUsedForAiSelection] = useState<string[]>([]); // Track demands used for AI selection
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Get the appropriate selected reps based on current mode
@@ -84,6 +85,11 @@ export default function IssueDetailsPage() {
       setSelectionExplanations(draftData.selectionExplanations);
     }
     
+    // Restore demands used for AI selection
+    if (draftData.demandsUsedForAiSelection && Array.isArray(draftData.demandsUsedForAiSelection)) {
+      setDemandsUsedForAiSelection(draftData.demandsUsedForAiSelection);
+    }
+    
     // Restore active mode if available
     if (draftData.activeMode === 'ai' || draftData.activeMode === 'manual') {
       setPickMode(draftData.activeMode);
@@ -125,36 +131,43 @@ export default function IssueDetailsPage() {
       selectionSummary,
       selectionExplanations,
       activeMode: pickMode,
-      campaignPreSelectedReps: campaignPreSelectedReps
+      campaignPreSelectedReps: campaignPreSelectedReps,
+      demandsUsedForAiSelection: demandsUsedForAiSelection
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [demands, personalInfo, manualSelectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode, currentSelectedReps, campaignPreSelectedReps]);
+  }, [demands, personalInfo, manualSelectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode, currentSelectedReps, campaignPreSelectedReps, demandsUsedForAiSelection]);
 
   // Auto-trigger AI selection when conditions are met
   useEffect(() => {
     // Only trigger if:
     // 1. We're in AI mode
     // 2. Representatives are loaded
-    // 3. We don't have AI selections yet
-    // 4. We have valid demands
-    // 5. We're not currently loading or selecting
+    // 3. We have valid demands
+    // 4. We're not currently loading or selecting
+    // 5. Either:
+    //    a. We don't have AI selections yet, OR
+    //    b. The demands have changed since last AI selection
     
-    const validDemands = demands.filter(d => d.trim()).length > 0;
+    const validDemands = demands.filter(d => d.trim());
+    const hasValidDemands = validDemands.length > 0;
     const hasContactableReps = representatives.some(rep => rep.contacts && rep.contacts.length > 0);
+    
+    // Check if demands have changed
+    const demandsChanged = JSON.stringify(validDemands.sort()) !== JSON.stringify(demandsUsedForAiSelection.sort());
     
     if (
       pickMode === 'ai' &&
       representatives.length > 0 &&
-      aiSelectedReps.size === 0 &&
-      validDemands &&
+      hasValidDemands &&
       hasContactableReps &&
       !isLoading &&
-      !isAiSelecting
+      !isAiSelecting &&
+      (aiSelectedReps.size === 0 || demandsChanged)
     ) {
       handlePickForMe();
     }
-  }, [pickMode, representatives, aiSelectedReps.size, demands, isLoading, isAiSelecting]);
+  }, [pickMode, representatives, aiSelectedReps.size, demands, isLoading, isAiSelecting, demandsUsedForAiSelection]);
   
   // Update localStorage when mode changes
   useEffect(() => {
@@ -513,6 +526,9 @@ export default function IssueDetailsPage() {
         if (data.explanations && typeof data.explanations === 'object') {
           setSelectionExplanations(data.explanations);
         }
+        
+        // Store the demands used for this AI selection
+        setDemandsUsedForAiSelection(validDemands);
       }
     } catch (error) {
       console.error('Error during AI selection:', error);
@@ -554,6 +570,7 @@ export default function IssueDetailsPage() {
       // Clear selection summary and explanations
       setSelectionSummary(null);
       setSelectionExplanations({});
+      setDemandsUsedForAiSelection([]);
 
       // Update localStorage
       const draftData = localStorage.getItem('draftData');
