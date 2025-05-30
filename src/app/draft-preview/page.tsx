@@ -643,6 +643,9 @@ export default function DraftPreviewPage() {
                         return {
                           name: rep.name,
                           webFormUrl: webformContact.value,
+                          // Include draft content specific to this representative
+                          draftSubject: draft.subject,
+                          draftContent: draft.content,
                         };
                       }
                     }
@@ -651,18 +654,8 @@ export default function DraftPreviewPage() {
                   .filter((rep): rep is Representative => rep !== null)
                 }
                 userData={{
-                  // Parse personal info to extract fields
-                  firstName: personalInfo.match(/First Name: (.+)/)?.[1] || '',
-                  lastName: personalInfo.match(/Last Name: (.+)/)?.[1] || '',
-                  email: personalInfo.match(/Email: (.+)/)?.[1] || '',
-                  phone: personalInfo.match(/Phone: (.+)/)?.[1] || '',
-                  address: {
-                    street: localStorage.getItem('userAddress') || '',
-                    // You might want to parse city/state/zip from the address
-                  },
-                  // Get the message from the first complete draft
-                  message: Array.from(drafts.values()).find(d => d.status === 'complete')?.content || '',
-                  subject: Array.from(drafts.values()).find(d => d.status === 'complete')?.subject || '',
+                  // Don't pre-fill here - let the ChromeExtensionHelper form collect the data
+                  // The form will merge this with user-entered data
                 }}
                 sessionId={Date.now().toString()}
               />

@@ -6,6 +6,8 @@ interface Representative {
   name: string;
   webFormUrl?: string;
   email?: string;
+  draftSubject?: string;
+  draftContent?: string;
 }
 
 interface ChromeExtensionHelperProps {
@@ -136,11 +138,19 @@ export default function ChromeExtensionHelper({
     setShowForm(false);
     
     try {
-      // Merge form data with existing userData
-      const enhancedUserData = {
-        ...userData,
-        ...formData
-      };
+      // Prepare representatives with their specific draft content in userData
+      const representativesWithData = representatives
+        .filter(rep => rep.webFormUrl)
+        .map(rep => ({
+          ...rep,
+          userData: {
+            ...userData,
+            ...formData,
+            // Include this representative's specific draft content
+            subject: rep.draftSubject || '',
+            message: rep.draftContent || ''
+          }
+        }));
       
       // Send message to extension to start filling forms
       chrome.runtime.sendMessage(
@@ -148,8 +158,7 @@ export default function ChromeExtensionHelper({
         {
           action: 'startFormFilling',
           data: {
-            representatives: representatives.filter(rep => rep.webFormUrl),
-            userData: enhancedUserData,
+            representatives: representativesWithData,
             sessionId
           }
         },

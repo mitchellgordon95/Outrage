@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFormFillingRequest(data) {
-  const { representatives, userData, sessionId } = data;
+  const { representatives, sessionId } = data;
   const results = [];
   
   for (const rep of representatives) {
@@ -59,11 +59,15 @@ async function handleFormFillingRequest(data) {
           active: true 
         });
         
-        // Store session data for this tab
+        // Store session data for this tab with rep-specific userData
         formSessions.set(tab.id, {
           sessionId,
-          representative: rep,
-          userData,
+          representative: {
+            name: rep.name,
+            webFormUrl: rep.webFormUrl,
+            email: rep.email
+          },
+          userData: rep.userData, // Use the rep-specific userData
           status: 'pending'
         });
         
