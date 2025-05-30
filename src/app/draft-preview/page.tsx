@@ -459,6 +459,16 @@ export default function DraftPreviewPage() {
                 ) : (
                   <>
                     <div className="mb-4">
+                      <h2 className="text-lg font-semibold mb-2">To</h2>
+                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        {selectedRepIndex !== null && representatives[selectedRepIndex] ? 
+                          `${representatives[selectedRepIndex].office} ${representatives[selectedRepIndex].name}` : 
+                          'Representative'
+                        }
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
                       <h2 className="text-lg font-semibold mb-2">Subject</h2>
                       <div className="bg-gray-50 p-3 rounded border border-gray-200">
                         {currentDraft.subject}
