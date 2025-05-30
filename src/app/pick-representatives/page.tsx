@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Representative, getRepresentativesByAddress } from '@/services/representatives';
-import { parseDraftData, getProgressState } from '@/utils/navigation';
+import { parseDraftData, getProgressState, RepresentativeId } from '@/utils/navigation';
 import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function IssueDetailsPage() {
@@ -12,9 +12,9 @@ export default function IssueDetailsPage() {
   const [demands, setDemands] = useState<string[]>([]);
   const [personalInfo, setPersonalInfo] = useState('');
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
-  const [manualSelectedReps, setManualSelectedReps] = useState<Set<number>>(new Set()); // For manual selection
-  const [aiSelectedReps, setAiSelectedReps] = useState<Set<number>>(new Set()); // Original AI picks (immutable)
-  const [aiRefinedReps, setAiRefinedReps] = useState<Set<number>>(new Set()); // User's refined AI selection
+  const [manualSelectedReps, setManualSelectedReps] = useState<Set<RepresentativeId>>(new Set()); // For manual selection
+  const [aiSelectedReps, setAiSelectedReps] = useState<Set<RepresentativeId>>(new Set()); // Original AI picks (immutable)
+  const [aiRefinedReps, setAiRefinedReps] = useState<Set<RepresentativeId>>(new Set()); // User's refined AI selection
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [address, setAddress] = useState('');
@@ -26,11 +26,17 @@ export default function IssueDetailsPage() {
   const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
   const [pickMode, setPickMode] = useState<'ai' | 'manual'>('ai'); // Toggle between AI and manual selection - default to AI
   const [campaignPreSelectedReps, setCampaignPreSelectedReps] = useState<{id: string; name: string}[]>([]); // Pre-selected reps from campaign
-  const [preSelectedIndices, setPreSelectedIndices] = useState<Set<number>>(new Set()); // Indices of pre-selected reps
+  const [preSelectedIds, setPreSelectedIds] = useState<Set<RepresentativeId>>(new Set()); // IDs of pre-selected reps
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Get the appropriate selected reps based on current mode
-  const currentSelectedReps = pickMode === 'ai' ? aiRefinedReps : manualSelectedReps;
+  // Always include pre-selected representatives
+  const currentSelectedReps = (() => {
+    const baseSelection = pickMode === 'ai' ? aiRefinedReps : manualSelectedReps;
+    const combined = new Set(baseSelection);
+    preSelectedIds.forEach(id => combined.add(id));
+    return combined;
+  })();
 
   useEffect(() => {
     // Get the address from localStorage
@@ -89,9 +95,9 @@ export default function IssueDetailsPage() {
     }
 
     // We'll restore selected reps after fetching representatives
-    const manualSelectedRepsSet = new Set(draftData.manualSelectedReps || []);
-    const aiSelectedRepsSet = new Set(draftData.aiSelectedReps || []);
-    const aiRefinedRepsSet = new Set(draftData.aiRefinedReps || []);
+    const manualSelectedRepsSet = new Set<RepresentativeId>(draftData.manualSelectedReps || []);
+    const aiSelectedRepsSet = new Set<RepresentativeId>(draftData.aiSelectedReps || []);
+    const aiRefinedRepsSet = new Set<RepresentativeId>(draftData.aiRefinedReps || []);
 
     // Fetch representatives and then restore selection
     fetchRepresentatives(storedAddress, manualSelectedRepsSet, aiSelectedRepsSet, aiRefinedRepsSet);
@@ -218,7 +224,7 @@ export default function IssueDetailsPage() {
   
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<unknown>, initialAiSelectedReps?: Set<unknown>, initialAiRefinedReps?: Set<unknown>) => {
+  const fetchRepresentatives = async (address: string, initialManualSelectedReps?: Set<RepresentativeId>, initialAiSelectedReps?: Set<RepresentativeId>, initialAiRefinedReps?: Set<RepresentativeId>) => {
     let progressInterval: NodeJS.Timeout | null = null;
     
     try {
@@ -250,28 +256,28 @@ export default function IssueDetailsPage() {
       
       // Handle pre-selected representatives from campaign
       if (campaignPreSelectedReps.length > 0) {
-        const preSelectedIndicesSet = new Set<number>();
+        const preSelectedIdsSet = new Set<RepresentativeId>();
         
-        // Find indices of pre-selected representatives in the fetched list
+        // Find IDs of pre-selected representatives in the fetched list
         campaignPreSelectedReps.forEach(preSelectedRep => {
-          const index = reps.findIndex(rep => 
+          const foundRep = reps.find(rep => 
             rep.id === preSelectedRep.id || 
             (rep.name === preSelectedRep.name && rep.name !== '')
           );
-          if (index !== -1) {
-            preSelectedIndicesSet.add(index);
+          if (foundRep && foundRep.id) {
+            preSelectedIdsSet.add(foundRep.id);
           }
         });
         
-        setPreSelectedIndices(preSelectedIndicesSet);
+        setPreSelectedIds(preSelectedIdsSet);
         
-        // Add pre-selected indices to manual selections
-        const newManualSelected = new Set<number>(preSelectedIndicesSet);
+        // Add pre-selected IDs to manual selections
+        const newManualSelected = new Set<RepresentativeId>(preSelectedIdsSet);
         if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
-          Array.from(initialManualSelectedReps).forEach(item => {
-            const index = Number(item);
-            if (!isNaN(index) && index < reps.length) {
-              newManualSelected.add(index);
+          initialManualSelectedReps.forEach(id => {
+            // Verify this ID exists in the fetched reps
+            if (reps.some(rep => rep.id === id)) {
+              newManualSelected.add(id);
             }
           });
         }
@@ -279,34 +285,32 @@ export default function IssueDetailsPage() {
       } else {
         // Restore manual selections if we have them
         if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
-          // Filter out any invalid indexes
-          const validSelectedReps = new Set<number>();
+          // Filter out any invalid IDs
+          const validSelectedReps = new Set<RepresentativeId>();
           
-          // Convert to array and filter
-          Array.from(initialManualSelectedReps).forEach(item => {
-            const index = Number(item);
-            if (!isNaN(index) && index < reps.length) {
-              validSelectedReps.add(index);
+          initialManualSelectedReps.forEach(id => {
+            // Verify this ID exists in the fetched reps
+            if (reps.some(rep => rep.id === id)) {
+              validSelectedReps.add(id);
             }
           });
           
           setManualSelectedReps(validSelectedReps);
         } else {
           // Start with no selected representatives for new addresses
-          setManualSelectedReps(new Set<number>());
+          setManualSelectedReps(new Set<RepresentativeId>());
         }
       }
       
       // Restore AI selections if we have them
       let hasValidAiSelections = false;
-      let validAiSelectedReps = new Set<number>();
+      let validAiSelectedReps = new Set<RepresentativeId>();
       
       if (initialAiSelectedReps && initialAiSelectedReps.size > 0) {
-        // Convert to array and filter
-        Array.from(initialAiSelectedReps).forEach(item => {
-          const index = Number(item);
-          if (!isNaN(index) && index < reps.length) {
-            validAiSelectedReps.add(index);
+        initialAiSelectedReps.forEach(id => {
+          // Verify this ID exists in the fetched reps
+          if (reps.some(rep => rep.id === id)) {
+            validAiSelectedReps.add(id);
           }
         });
         
@@ -316,16 +320,20 @@ export default function IssueDetailsPage() {
         }
       }
       
+      // Note: preSelectedIdsSet will be set by the state after this function completes
+      
       // Restore AI refined selections (user's subset of AI picks)
       if (initialAiRefinedReps && initialAiRefinedReps.size > 0) {
-        const validAiRefinedReps = new Set<number>();
+        const validAiRefinedReps = new Set<RepresentativeId>();
         
-        Array.from(initialAiRefinedReps).forEach(item => {
-          const index = Number(item);
-          if (!isNaN(index) && index < reps.length) {
-            validAiRefinedReps.add(index);
+        initialAiRefinedReps.forEach(id => {
+          // Verify this ID exists in the fetched reps
+          if (reps.some(rep => rep.id === id)) {
+            validAiRefinedReps.add(id);
           }
         });
+        
+        // Note: pre-selected IDs will be included via the state
         
         if (validAiRefinedReps.size > 0) {
           setAiRefinedReps(validAiRefinedReps);
@@ -355,15 +363,15 @@ export default function IssueDetailsPage() {
 
   // No longer need demand handling functions
 
-  const toggleRepresentative = (index: number) => {
+  const toggleRepresentative = (repId: RepresentativeId) => {
     // Check if this is a pre-selected representative
-    if (preSelectedIndices.has(index)) {
+    if (preSelectedIds.has(repId)) {
       // Don't allow deselecting pre-selected representatives
       return;
     }
     
     // Check if the representative has any contact methods
-    const rep = representatives[index];
+    const rep = representatives.find(r => r.id === repId);
     const hasContacts = rep?.contacts && rep.contacts.length > 0;
     
     // Only allow toggling if the representative has at least one contact method
@@ -371,22 +379,22 @@ export default function IssueDetailsPage() {
       if (pickMode === 'ai') {
         // In AI mode, toggle within the refined selection
         // But only allow toggling if it's in the original AI selection
-        if (aiSelectedReps.has(index)) {
+        if (aiSelectedReps.has(repId)) {
           const newRefined = new Set(aiRefinedReps);
-          if (newRefined.has(index)) {
-            newRefined.delete(index);
+          if (newRefined.has(repId)) {
+            newRefined.delete(repId);
           } else {
-            newRefined.add(index);
+            newRefined.add(repId);
           }
           setAiRefinedReps(newRefined);
         }
       } else {
         // In manual mode, toggle in manual selection
         const newSelected = new Set(manualSelectedReps);
-        if (newSelected.has(index)) {
-          newSelected.delete(index);
+        if (newSelected.has(repId)) {
+          newSelected.delete(repId);
         } else {
-          newSelected.add(index);
+          newSelected.add(repId);
         }
         setManualSelectedReps(newSelected);
       }
@@ -396,16 +404,16 @@ export default function IssueDetailsPage() {
   const handleSelectAll = () => {
     // Select all representatives that have contact methods
     const representativesWithContacts = representatives
-      .map((rep, index) => ({ rep, index }))
-      .filter(item => item.rep.contacts && item.rep.contacts.length > 0)
-      .map(item => item.index);
+      .filter(rep => rep.contacts && rep.contacts.length > 0 && rep.id)
+      .map(rep => rep.id)
+      .filter((id): id is string => id !== undefined);
     
     setManualSelectedReps(new Set(representativesWithContacts));
   };
   
   const handleUnselectAll = () => {
     // Unselect all representatives except pre-selected ones
-    setManualSelectedReps(new Set(preSelectedIndices));
+    setManualSelectedReps(new Set(preSelectedIds));
   };
   
   // Handler for the "Pick for Me" feature
@@ -453,14 +461,12 @@ export default function IssueDetailsPage() {
       const data = await response.json();
       
       // Update selected representatives based on the AI's recommendations
-      if (data.selectedIndices && Array.isArray(data.selectedIndices)) {
-        // Map the filtered indices back to original indices
-        const originalIndices = data.selectedIndices.map((idx: number) => indexMap[idx]).filter((idx: number | undefined) => idx !== undefined);
-        const newAiSelection = new Set(originalIndices as number[]);
+      if (data.selectedIds && Array.isArray(data.selectedIds)) {
+        const newAiSelection = new Set<RepresentativeId>(data.selectedIds);
         
         // Always include pre-selected representatives in AI selection
-        preSelectedIndices.forEach(index => {
-          newAiSelection.add(index);
+        preSelectedIds.forEach(id => {
+          newAiSelection.add(id);
         });
         
         setAiSelectedReps(newAiSelection);
@@ -509,9 +515,9 @@ export default function IssueDetailsPage() {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
       // Clear all selected representatives except pre-selected ones
-      setManualSelectedReps(new Set<number>(preSelectedIndices));
-      setAiSelectedReps(new Set<number>(preSelectedIndices));
-      setAiRefinedReps(new Set<number>(preSelectedIndices));
+      setManualSelectedReps(new Set<RepresentativeId>(preSelectedIds));
+      setAiSelectedReps(new Set<RepresentativeId>(preSelectedIds));
+      setAiRefinedReps(new Set<RepresentativeId>(preSelectedIds));
 
       // Clear selection summary and explanations
       setSelectionSummary(null);
@@ -575,7 +581,7 @@ export default function IssueDetailsPage() {
       const draftData = {
         demands: validDemands,
         personalInfo: personalInfo.trim(),
-        representatives: representatives.filter((_, index) => currentSelectedReps.has(index)),
+        representatives: representatives.filter(rep => rep.id && currentSelectedReps.has(rep.id)),
         selectedReps: Array.from(currentSelectedReps),
         // Use current AI selection data or fall back to previously stored data
         selectionSummary: existingSelectionSummary || existingData.selectionSummary,
@@ -842,7 +848,7 @@ export default function IssueDetailsPage() {
                       {aiRefinedReps.size} of {aiSelectedReps.size} selected
                     </span>
                     <button
-                      onClick={() => setAiRefinedReps(new Set(preSelectedIndices))}
+                      onClick={() => setAiRefinedReps(new Set(preSelectedIds))}
                       className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                     >
                       Unselect All
@@ -858,10 +864,10 @@ export default function IssueDetailsPage() {
                   </div>
                 )}
                 <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-1">
-                  {Array.from(aiSelectedReps).sort((a, b) => {
+                  {Array.from(aiSelectedReps).sort((aId, bId) => {
                     // Sort by contact availability
-                    const aRep = representatives[a];
-                    const bRep = representatives[b];
+                    const aRep = representatives.find(r => r.id === aId);
+                    const bRep = representatives.find(r => r.id === bId);
                     if (!aRep || !bRep) return 0;
                     
                     const aHasContacts = aRep.contacts && aRep.contacts.length > 0;
@@ -870,21 +876,21 @@ export default function IssueDetailsPage() {
                     if (aHasContacts && !bHasContacts) return -1; // a comes first
                     if (!aHasContacts && bHasContacts) return 1;  // b comes first
                     return 0; // keep original order
-                  }).map(index => {
-                    const rep = representatives[index];
+                  }).map(repId => {
+                    const rep = representatives.find(r => r.id === repId);
                     if (!rep) return null;
                     
                     return (
-                      <div key={`selected-fixed-${index}`} className="p-2 bg-white border border-primary rounded-md">
+                      <div key={`selected-fixed-${repId}`} className="p-2 bg-white border border-primary rounded-md">
                         <div className="flex items-start">
                           <input
                             type="checkbox"
-                            id={`selected-fixed-rep-${index}`}
-                            checked={aiRefinedReps.has(index)}
-                            onChange={() => toggleRepresentative(index)}
-                            disabled={preSelectedIndices.has(index)}
+                            id={`selected-fixed-rep-${repId}`}
+                            checked={aiRefinedReps.has(repId)}
+                            onChange={() => toggleRepresentative(repId)}
+                            disabled={preSelectedIds.has(repId)}
                             className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
-                            title={preSelectedIndices.has(index) ? "Pre-selected representatives cannot be unselected" : ""}
+                            title={preSelectedIds.has(repId) ? "Pre-selected representatives cannot be unselected" : ""}
                           />
                           <div className="mr-2 flex-shrink-0">
                             {rep.photoUrl ? (
@@ -913,7 +919,7 @@ export default function IssueDetailsPage() {
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-1">
                                 <h3 className="font-medium text-primary truncate">{rep.name}</h3>
-                                {preSelectedIndices.has(index) && (
+                                {preSelectedIds.has(repId) && (
                                   <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
                                     Pre-selected
                                   </span>
@@ -1036,15 +1042,15 @@ export default function IssueDetailsPage() {
                     <div key={level} className={`mb-4 ${bgColor} border ${borderColor} rounded-md p-3`}>
                       <h3 className={`text-lg font-semibold mb-2 pb-2 border-b ${borderColor} ${textColor}`}>{levelTitle} Representatives</h3>
                       <div className="grid gap-2">
-                        {levelReps.map((rep, repIndex) => {
-                          // Find the original index in the full representatives array
-                          const index = representatives.findIndex(r => r === rep);
-                          const isSelected = manualSelectedReps.has(index);
+                        {levelReps.map((rep) => {
+                          const repId = rep.id;
+                          if (!repId) return null;
+                          const isSelected = manualSelectedReps.has(repId);
                           const hasContacts = rep.contacts && rep.contacts.length > 0;
                           
                           return (
                             <div 
-                              key={index} 
+                              key={repId} 
                               className={`p-2 border rounded-md ${
                                 !hasContacts ? 'opacity-60 bg-gray-50' :
                                 isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
@@ -1053,12 +1059,12 @@ export default function IssueDetailsPage() {
                               <div className="flex items-start">
                                 <input
                                   type="checkbox"
-                                  id={`rep-${index}`}
+                                  id={`rep-${repId}`}
                                   checked={isSelected}
-                                  onChange={() => toggleRepresentative(index)}
-                                  disabled={!hasContacts || preSelectedIndices.has(index)}
+                                  onChange={() => toggleRepresentative(repId)}
+                                  disabled={!hasContacts || preSelectedIds.has(repId)}
                                   className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
-                                  title={preSelectedIndices.has(index) ? "Pre-selected representatives cannot be unselected" : ""}
+                                  title={preSelectedIds.has(repId) ? "Pre-selected representatives cannot be unselected" : ""}
                                 />
                                 <div className="mr-2 flex-shrink-0">
                                   {rep.photoUrl ? (
@@ -1087,7 +1093,7 @@ export default function IssueDetailsPage() {
                                   <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-1">
                                       <h3 className="font-medium truncate">{rep.name}</h3>
-                                      {preSelectedIndices.has(index) && (
+                                      {preSelectedIds.has(repId) && (
                                         <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
                                           Pre-selected
                                         </span>

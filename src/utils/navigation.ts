@@ -1,13 +1,16 @@
 // Navigation utility for consistent routing based on progress
 
+// Type alias for representative IDs
+export type RepresentativeId = string;
+
 // Interface for draft data
 export interface DraftData {
   demands?: string[];
   personalInfo?: string;
-  selectedReps?: number[]; // Always the current active selection
-  manualSelectedReps?: number[]; // Manual mode selections
-  aiSelectedReps?: number[]; // Original AI picks
-  aiRefinedReps?: number[]; // User's refined AI selection
+  selectedReps?: RepresentativeId[]; // Always the current active selection
+  manualSelectedReps?: RepresentativeId[]; // Manual mode selections
+  aiSelectedReps?: RepresentativeId[]; // Original AI picks
+  aiRefinedReps?: RepresentativeId[]; // User's refined AI selection
   activeMode?: 'ai' | 'manual';
   representatives?: any[];
   personalInfoCompleted?: boolean;

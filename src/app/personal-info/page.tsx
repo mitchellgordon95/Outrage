@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { parseDraftData, getProgressState } from '@/utils/navigation';
+import { parseDraftData, getProgressState, RepresentativeId } from '@/utils/navigation';
 import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function PersonalInfoPage() {
@@ -13,7 +13,7 @@ export default function PersonalInfoPage() {
   const [selectedItems, setSelectedItems] = useState<{[key: string]: boolean}>({});
   const [address, setAddress] = useState('');
   const [demands, setDemands] = useState<string[]>([]);
-  const [selectedReps, setSelectedReps] = useState<number[]>([]);
+  const [selectedReps, setSelectedReps] = useState<RepresentativeId[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {

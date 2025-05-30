@@ -144,9 +144,8 @@ Example format:
         });
       }
       
-      // Return the selected indices, IDs, summary, and explanations
+      // Return the selected IDs, summary, and explanations
       return NextResponse.json({ 
-        selectedIndices: validIndices,
         selectedIds,
         summary: summary || 'Representatives were selected based on their relevance to your demands.',
         explanations: idExplanations
@@ -154,7 +153,7 @@ Example format:
     } catch (error) {
       console.error('Error parsing AI response:', error, 'Response text:', responseText);
       return NextResponse.json(
-        { error: 'Failed to parse selected representatives', selectedIndices: [] },
+        { error: 'Failed to parse selected representatives', selectedIds: [] },
         { status: 500 }
       );
     }
