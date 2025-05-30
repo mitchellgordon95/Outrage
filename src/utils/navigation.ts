@@ -13,6 +13,10 @@ export interface DraftData {
   personalInfoCompleted?: boolean;
   selectionSummary?: string;
   selectionExplanations?: Record<string, string>;
+  campaignPreSelectedReps?: {id: string; name: string}[]; // Pre-selected reps from campaign
+  activeCampaignId?: number;
+  demandsCompleted?: boolean;
+  representativesCompleted?: boolean;
 }
 
 // Interface for progress state

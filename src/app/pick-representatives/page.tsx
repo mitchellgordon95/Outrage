@@ -24,6 +24,8 @@ export default function IssueDetailsPage() {
   const [selectionSummary, setSelectionSummary] = useState<string | null>(null); // Summary of AI selection
   const [selectionExplanations, setSelectionExplanations] = useState<Record<string, string>>({}); // Individual explanations
   const [pickMode, setPickMode] = useState<'ai' | 'manual'>('ai'); // Toggle between AI and manual selection - default to AI
+  const [campaignPreSelectedReps, setCampaignPreSelectedReps] = useState<{id: string; name: string}[]>([]); // Pre-selected reps from campaign
+  const [preSelectedIndices, setPreSelectedIndices] = useState<Set<number>>(new Set()); // Indices of pre-selected reps
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Get the appropriate selected reps based on current mode
@@ -78,6 +80,11 @@ export default function IssueDetailsPage() {
     // Restore active mode if available
     if (draftData.activeMode === 'ai' || draftData.activeMode === 'manual') {
       setPickMode(draftData.activeMode);
+    }
+    
+    // Check for pre-selected representatives from campaign
+    if (draftData.campaignPreSelectedReps && Array.isArray(draftData.campaignPreSelectedReps)) {
+      setCampaignPreSelectedReps(draftData.campaignPreSelectedReps);
     }
 
     // We'll restore selected reps after fetching representatives
@@ -240,23 +247,53 @@ export default function IssueDetailsPage() {
       
       setRepresentatives(reps);
       
-      // Restore manual selections if we have them
-      if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
-        // Filter out any invalid indexes
-        const validSelectedReps = new Set<number>();
+      // Handle pre-selected representatives from campaign
+      if (campaignPreSelectedReps.length > 0) {
+        const preSelectedIndicesSet = new Set<number>();
         
-        // Convert to array and filter
-        Array.from(initialManualSelectedReps).forEach(item => {
-          const index = Number(item);
-          if (!isNaN(index) && index < reps.length) {
-            validSelectedReps.add(index);
+        // Find indices of pre-selected representatives in the fetched list
+        campaignPreSelectedReps.forEach(preSelectedRep => {
+          const index = reps.findIndex(rep => 
+            rep.id === preSelectedRep.id || 
+            (rep.name === preSelectedRep.name && rep.name !== '')
+          );
+          if (index !== -1) {
+            preSelectedIndicesSet.add(index);
           }
         });
         
-        setManualSelectedReps(validSelectedReps);
+        setPreSelectedIndices(preSelectedIndicesSet);
+        
+        // Add pre-selected indices to manual selections
+        const newManualSelected = new Set<number>(preSelectedIndicesSet);
+        if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
+          Array.from(initialManualSelectedReps).forEach(item => {
+            const index = Number(item);
+            if (!isNaN(index) && index < reps.length) {
+              newManualSelected.add(index);
+            }
+          });
+        }
+        setManualSelectedReps(newManualSelected);
       } else {
-        // Start with no selected representatives for new addresses
-        setManualSelectedReps(new Set<number>());
+        // Restore manual selections if we have them
+        if (initialManualSelectedReps && initialManualSelectedReps.size > 0) {
+          // Filter out any invalid indexes
+          const validSelectedReps = new Set<number>();
+          
+          // Convert to array and filter
+          Array.from(initialManualSelectedReps).forEach(item => {
+            const index = Number(item);
+            if (!isNaN(index) && index < reps.length) {
+              validSelectedReps.add(index);
+            }
+          });
+          
+          setManualSelectedReps(validSelectedReps);
+        } else {
+          // Start with no selected representatives for new addresses
+          setManualSelectedReps(new Set<number>());
+        }
       }
       
       // Restore AI selections if we have them
@@ -318,6 +355,12 @@ export default function IssueDetailsPage() {
   // No longer need demand handling functions
 
   const toggleRepresentative = (index: number) => {
+    // Check if this is a pre-selected representative
+    if (preSelectedIndices.has(index)) {
+      // Don't allow deselecting pre-selected representatives
+      return;
+    }
+    
     // Check if the representative has any contact methods
     const rep = representatives[index];
     const hasContacts = rep?.contacts && rep.contacts.length > 0;
@@ -360,8 +403,8 @@ export default function IssueDetailsPage() {
   };
   
   const handleUnselectAll = () => {
-    // Unselect all representatives
-    setManualSelectedReps(new Set());
+    // Unselect all representatives except pre-selected ones
+    setManualSelectedReps(new Set(preSelectedIndices));
   };
   
   // Handler for the "Pick for Me" feature
@@ -413,6 +456,12 @@ export default function IssueDetailsPage() {
         // Map the filtered indices back to original indices
         const originalIndices = data.selectedIndices.map((idx: number) => indexMap[idx]).filter((idx: number | undefined) => idx !== undefined);
         const newAiSelection = new Set(originalIndices as number[]);
+        
+        // Always include pre-selected representatives in AI selection
+        preSelectedIndices.forEach(index => {
+          newAiSelection.add(index);
+        });
+        
         setAiSelectedReps(newAiSelection);
         setAiRefinedReps(new Set(newAiSelection)); // Initially, refined = original AI picks
         
@@ -458,10 +507,10 @@ export default function IssueDetailsPage() {
   const handleClearSelections = () => {
     // Ask for confirmation
     if (confirm("Are you sure you want to clear all representative selections? This cannot be undone.")) {
-      // Clear all selected representatives
-      setManualSelectedReps(new Set<number>());
-      setAiSelectedReps(new Set<number>());
-      setAiRefinedReps(new Set<number>());
+      // Clear all selected representatives except pre-selected ones
+      setManualSelectedReps(new Set<number>(preSelectedIndices));
+      setAiSelectedReps(new Set<number>(preSelectedIndices));
+      setAiRefinedReps(new Set<number>(preSelectedIndices));
 
       // Clear selection summary and explanations
       setSelectionSummary(null);
@@ -663,6 +712,15 @@ export default function IssueDetailsPage() {
                 </div>
               </div>
               
+              {/* Show message if there are pre-selected representatives from campaign */}
+              {campaignPreSelectedReps.length > 0 && (
+                <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-md">
+                  <p className="text-sm text-purple-700">
+                    This campaign includes {campaignPreSelectedReps.length} pre-selected representative{campaignPreSelectedReps.length > 1 ? 's' : ''} that cannot be removed.
+                  </p>
+                </div>
+              )}
+              
               {/* Toggle between AI and Manual selection */}
               <div className="flex mb-4">
                 {!isLoading && representatives.length > 0 && (
@@ -779,7 +837,7 @@ export default function IssueDetailsPage() {
                       {aiRefinedReps.size} of {aiSelectedReps.size} selected
                     </span>
                     <button
-                      onClick={() => setAiRefinedReps(new Set())}
+                      onClick={() => setAiRefinedReps(new Set(preSelectedIndices))}
                       className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                     >
                       Unselect All
@@ -819,7 +877,9 @@ export default function IssueDetailsPage() {
                             id={`selected-fixed-rep-${index}`}
                             checked={aiRefinedReps.has(index)}
                             onChange={() => toggleRepresentative(index)}
-                            className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
+                            disabled={preSelectedIndices.has(index)}
+                            className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
+                            title={preSelectedIndices.has(index) ? "Pre-selected representatives cannot be unselected" : ""}
                           />
                           <div className="mr-2 flex-shrink-0">
                             {rep.photoUrl ? (
@@ -846,7 +906,14 @@ export default function IssueDetailsPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
-                              <h3 className="font-medium text-primary truncate">{rep.name}</h3>
+                              <div className="flex items-center gap-1">
+                                <h3 className="font-medium text-primary truncate">{rep.name}</h3>
+                                {preSelectedIndices.has(index) && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                                    Pre-selected
+                                  </span>
+                                )}
+                              </div>
                               {rep.party && (
                                 <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
                                   rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
@@ -984,8 +1051,9 @@ export default function IssueDetailsPage() {
                                   id={`rep-${index}`}
                                   checked={isSelected}
                                   onChange={() => toggleRepresentative(index)}
-                                  disabled={!hasContacts}
+                                  disabled={!hasContacts || preSelectedIndices.has(index)}
                                   className="mt-1 mr-2 h-4 w-4 text-primary accent-primary disabled:opacity-50"
+                                  title={preSelectedIndices.has(index) ? "Pre-selected representatives cannot be unselected" : ""}
                                 />
                                 <div className="mr-2 flex-shrink-0">
                                   {rep.photoUrl ? (
@@ -1012,7 +1080,14 @@ export default function IssueDetailsPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-start">
-                                    <h3 className="font-medium truncate">{rep.name}</h3>
+                                    <div className="flex items-center gap-1">
+                                      <h3 className="font-medium truncate">{rep.name}</h3>
+                                      {preSelectedIndices.has(index) && (
+                                        <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                                          Pre-selected
+                                        </span>
+                                      )}
+                                    </div>
                                     {rep.party && (
                                       <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
                                         rep.party.toLowerCase().includes('democrat') ? 'bg-blue-100 text-blue-800' : 
