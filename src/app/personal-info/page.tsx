@@ -77,12 +77,20 @@ export default function PersonalInfoPage() {
             "I've voted in this district for 10+ years", "I've voted in this district for 20+ years",
             "First-time voter", "Haven't voted in a while",
             // Age
-            "18-24 year old", "25-34 year old", "35-44 year old", 
-            "45-54 year old", "55-64 year old", "65+ year old",
+            "Gen Z", "Millennial", "Gen X", "Boomer", "Silent Generation",
+            "Early 20s", "Late 20s", "Early 30s", "Late 30s", "Early 40s",
+            "Late 40s", "50s", "60s", "70s", "80+",
             // Race/Ethnicity
             "African American / Black", "Asian American / Pacific Islander", 
             "Hispanic / Latino", "Native American / Indigenous", 
-            "White / Caucasian", "Multiracial"
+            "White / Caucasian", "Multiracial",
+            // Gender/Sexual Orientation
+            "Woman", "Man", "Non-binary", "Transgender", 
+            "Gender non-conforming", "LGBTQ+", "Straight/Heterosexual",
+            // Religion
+            "Christian", "Catholic", "Protestant", "Jewish", "Muslim",
+            "Hindu", "Buddhist", "Atheist", "Agnostic", 
+            "Spiritual", "Person of faith"
           ];
           
           // Process each line after the name
@@ -448,6 +456,66 @@ export default function PersonalInfoPage() {
                     selectedItems[item] 
                       ? 'bg-purple-600 border-purple-700 text-white' 
                       : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Gender/Sexual Orientation */}
+          <div className="mb-4">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Gender/Sexual Orientation</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Woman",
+                "Man",
+                "Non-binary",
+                "Transgender",
+                "Gender non-conforming",
+                "LGBTQ+",
+                "Straight/Heterosexual"
+              ].map((item, index) => (
+                <button
+                  key={`gender-${index}`}
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-pink-600 border-pink-700 text-white' 
+                      : 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100'
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Religion */}
+          <div className="mb-4">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Religion</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Christian",
+                "Catholic",
+                "Protestant",
+                "Jewish",
+                "Muslim",
+                "Hindu",
+                "Buddhist",
+                "Atheist",
+                "Agnostic",
+                "Spiritual",
+                "Person of faith"
+              ].map((item, index) => (
+                <button
+                  key={`religion-${index}`}
+                  onClick={() => toggleItem(item)}
+                  className={`px-2 py-1 border rounded text-xs transition-colors ${
+                    selectedItems[item] 
+                      ? 'bg-indigo-600 border-indigo-700 text-white' 
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
                   }`}
                 >
                   {item}
