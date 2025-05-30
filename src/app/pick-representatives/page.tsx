@@ -839,14 +839,14 @@ export default function IssueDetailsPage() {
             {pickMode === 'ai' && !isLoading && !apiError && (
               <>
                 {/* AI Selection Summary */}
-                {selectionSummary && (
+                {selectionSummary && !isAiSelecting && (
                   <div className="mb-3 py-2 px-3 bg-blue-50 border border-blue-200 rounded-md">
                     <p className="text-sm text-blue-700">{selectionSummary}</p>
                   </div>
                 )}
                 
                 {/* AI Pick Button or loading state if no selection yet */}
-                {aiSelectedReps.size === 0 && (
+                {(aiSelectedReps.size === 0 || isAiSelecting) && (
                   <div className="text-center py-8">
                     {/* Show loading state if conditions suggest auto-selection will trigger */}
                     {(isAiSelecting || (representatives.length === 0 && demands.filter(d => d.trim()).length > 0)) ? (
@@ -897,7 +897,7 @@ export default function IssueDetailsPage() {
             )}
             
             {/* Selected Representatives Section - Show only in AI mode */}
-            {pickMode === 'ai' && !isLoading && aiSelectedReps.size > 0 && !apiError && (
+            {pickMode === 'ai' && !isLoading && aiSelectedReps.size > 0 && !apiError && !isAiSelecting && (
               <div className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-3">
                 <h3 className="text-lg font-semibold mb-2 pb-2 border-b border-blue-200 text-primary">AI Selected Representatives</h3>
                 {/* Show count and unselect all only in AI mode */}
