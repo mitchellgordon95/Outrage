@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { unstable_cache } from 'next/cache';
+import crypto from 'crypto';
 
 import { Contact } from '@/services/representatives';
 
@@ -48,6 +50,21 @@ function validateRequest(body: RequestBody): boolean {
   }
   
   return true;
+}
+
+// Create a deterministic hash for cache key
+function createCacheKey(demands: string[], personalInfo: string | undefined, recipient: any): string {
+  const data = {
+    demands: demands.sort(), // Sort for consistency
+    personalInfo: personalInfo || '',
+    recipientName: recipient.name,
+    recipientOffice: recipient.office,
+    recipientContacts: recipient.contacts?.map((c: Contact) => `${c.type}:${c.value}`).sort() || []
+  };
+  
+  const hash = crypto.createHash('sha256');
+  hash.update(JSON.stringify(data));
+  return hash.digest('hex');
 }
 
 // Generate the draft using Anthropic API with retry logic
@@ -270,6 +287,35 @@ async function parseAnthropicResponse(response: any, isRetry: boolean = false): 
   }
 }
 
+// Cached version of draft generation
+// Cache for 2 hours since AI models and prompts might improve
+const getCachedDraft = unstable_cache(
+  async (cacheKey: string, requestBody: RequestBody): Promise<DraftResponse | null> => {
+    console.log(`[CACHE MISS] Generating new draft for cache key: ${cacheKey.substring(0, 8)}...`);
+    
+    // Generate draft with retry logic
+    let draft = await generateDraft(requestBody);
+    
+    // Check if we got a non-email response and need to retry
+    if (draft && (draft as any).notEmail) {
+      console.log('First attempt resulted in correction/clarification, retrying with assertive prompt...');
+      draft = await generateDraft(requestBody, true);
+    }
+    
+    // Remove notEmail flag if present before caching
+    if (draft && (draft as any).notEmail) {
+      delete (draft as any).notEmail;
+    }
+    
+    return draft;
+  },
+  ['draft-generation'], // cache key prefix
+  {
+    revalidate: 7200, // 2 hours in seconds
+    tags: ['drafts'] // allows manual cache invalidation if needed
+  }
+);
+
 // Error response helper
 function errorResponse(message: string, status: number = 500, details?: string): Response {
   return NextResponse.json(
@@ -303,25 +349,46 @@ export async function POST(request: NextRequest) {
     
     // Generate draft with retry logic
     try {
-      const { workingDraft, feedback } = requestBody;
-      let draft = await generateDraft({ ...requestBody, workingDraft, feedback });
+      const { workingDraft, feedback, demands, personalInfo, recipient } = requestBody;
       
-      // Check if we got a non-email response and need to retry
-      if (draft && (draft as any).notEmail) {
-        console.log('First attempt resulted in correction/clarification, retrying with assertive prompt...');
-        draft = await generateDraft({ ...requestBody, workingDraft, feedback }, true);
+      let draft: DraftResponse | null;
+      let cacheStatus = 'MISS';
+      
+      // Only use cache for initial draft generation (not for revisions)
+      if (!workingDraft && !feedback) {
+        // Create cache key from request parameters
+        const cacheKey = createCacheKey(demands, personalInfo, recipient);
+        console.log(`Cache key generated: ${cacheKey.substring(0, 8)}...`);
+        
+        // Try to get cached draft
+        draft = await getCachedDraft(cacheKey, requestBody);
+        cacheStatus = draft ? 'HIT' : 'MISS';
+      } else {
+        // For revisions, always generate fresh
+        console.log('Revision request - bypassing cache');
+        draft = await generateDraft({ ...requestBody, workingDraft, feedback });
+        
+        // Check if we got a non-email response and need to retry
+        if (draft && (draft as any).notEmail) {
+          console.log('First attempt resulted in correction/clarification, retrying with assertive prompt...');
+          draft = await generateDraft({ ...requestBody, workingDraft, feedback }, true);
+        }
+        
+        // Remove notEmail flag if present
+        if (draft && (draft as any).notEmail) {
+          delete (draft as any).notEmail;
+        }
       }
       
       if (!draft) {
         return errorResponse('Failed to generate draft');
       }
       
-      // Remove notEmail flag if present before returning
-      if ((draft as any).notEmail) {
-        delete (draft as any).notEmail;
-      }
+      // Add cache status to response headers
+      const response = NextResponse.json(draft);
+      response.headers.set('X-Cache-Status', cacheStatus);
       
-      return NextResponse.json(draft);
+      return response;
     } catch (apiError) {
       console.error('Error calling Anthropic API:', apiError);
       return errorResponse('Failed to generate draft with AI service');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Representative, Contact, ContactType } from '@/services/representatives';
+import { unstable_cache } from 'next/cache';
 
 // Cicero API identifier interface
 interface CiceroIdentifier {
@@ -39,66 +40,61 @@ interface CiceroOfficial {
   identifiers?: CiceroIdentifier[];
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    // Get address from request
-    const { address } = await request.json();
+// Normalize address for cache key (lowercase, trim, remove extra spaces)
+function normalizeAddress(address: string): string {
+  return address.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+// Core function to fetch representatives from Cicero API
+async function fetchRepresentativesFromCicero(address: string): Promise<Representative[]> {
+  const apiKey = process.env.CICERO_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('API key missing');
+  }
     
-    if (!address) {
-      return NextResponse.json({ error: 'Address is required' }, { status: 400 });
-    }
+  // Call Cicero API with max parameter to get up to 200 officials
+  const url = `https://app.cicerodata.com/v3.1/official?search_loc=${encodeURIComponent(address)}&format=json&max=200&key=${apiKey}`;
+  
+  // Log a simple message about the API call
+  console.log(`[CACHE MISS] Looking up representatives for address: ${address.substring(0, 30)}...`);
     
-    // Get API key from environment variables
-    const apiKey = process.env.CICERO_API_KEY;
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    console.log(`API error: ${response.status}`);
+    throw new Error(`API error: ${response.status}`);
+  }
     
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key missing' }, { status: 500 });
-    }
+  // Parse the response
+  const data = await response.json();
+  
+  // Log a simple message about the response
+  const candidateCount = data.response?.results?.candidates?.length || 0;
+  console.log(`Found ${candidateCount} location candidates in response`);
+  
+  // Initialize empty officials array
+  let officials = [];
+  
+  // Check for location candidates (each candidate has its own officials)
+  if (data.response?.results?.candidates && data.response.results.candidates.length > 0) {
+    // Use the first candidate's officials
+    const firstCandidate = data.response.results.candidates[0];
     
-    // Call Cicero API with max parameter to get up to 200 officials
-    const url = `https://app.cicerodata.com/v3.1/official?search_loc=${encodeURIComponent(address)}&format=json&max=200&key=${apiKey}`;
-    
-    // Log a simple message about the API call
-    console.log(`Looking up representatives for address: ${address.substring(0, 30)}...`);
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.log(`API error: ${response.status}`);
-      return NextResponse.json({ 
-        error: `API error: ${response.status}`
-      }, { status: response.status });
-    }
-    
-    // Parse the response
-    const data = await response.json();
-    
-    // Log a simple message about the response
-    const candidateCount = data.response?.results?.candidates?.length || 0;
-    console.log(`Found ${candidateCount} location candidates in response`);
-    
-    // Initialize empty officials array
-    let officials = [];
-    
-    // Check for location candidates (each candidate has its own officials)
-    if (data.response?.results?.candidates && data.response.results.candidates.length > 0) {
-      // Use the first candidate's officials
-      const firstCandidate = data.response.results.candidates[0];
-      
-      if (firstCandidate.officials && Array.isArray(firstCandidate.officials)) {
-        officials = firstCandidate.officials;
-        console.log(`Found ${officials.length} officials for address`);
-      } else {
-        console.log('No officials found for the matched address');
-      }
-    } else if (data.response?.results?.officials) {
-      // Direct officials array (unlikely based on your results)
-      officials = data.response.results.officials;
+    if (firstCandidate.officials && Array.isArray(firstCandidate.officials)) {
+      officials = firstCandidate.officials;
       console.log(`Found ${officials.length} officials for address`);
     } else {
-      console.log('No officials found for the provided address');
-      return NextResponse.json({ representatives: [] });
+      console.log('No officials found for the matched address');
     }
+  } else if (data.response?.results?.officials) {
+    // Direct officials array (unlikely based on your results)
+    officials = data.response.results.officials;
+    console.log(`Found ${officials.length} officials for address`);
+  } else {
+    console.log('No officials found for the provided address');
+    return [];
+  }
     
     // Filter officials to only include those currently in office
     const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -264,7 +260,49 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    return NextResponse.json({ representatives });
+  return representatives;
+}
+
+// Cached version of the fetch function
+// Cache for 24 hours (86400 seconds) since representatives rarely change
+const getCachedRepresentatives = unstable_cache(
+  async (normalizedAddress: string) => {
+    console.log(`[CACHE] Fetching representatives for: ${normalizedAddress.substring(0, 30)}...`);
+    return fetchRepresentativesFromCicero(normalizedAddress);
+  },
+  ['representatives'], // cache key prefix
+  {
+    revalidate: 86400, // 24 hours in seconds
+    tags: ['representatives'] // allows manual cache invalidation if needed
+  }
+);
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get address from request
+    const { address } = await request.json();
+    
+    if (!address) {
+      return NextResponse.json({ error: 'Address is required' }, { status: 400 });
+    }
+    
+    // Normalize address for consistent caching
+    const normalizedAddress = normalizeAddress(address);
+    
+    try {
+      // Try to get cached representatives
+      const representatives = await getCachedRepresentatives(normalizedAddress);
+      
+      // Add cache hit indicator to response headers
+      const response = NextResponse.json({ representatives });
+      response.headers.set('X-Cache-Status', 'HIT');
+      
+      return response;
+    } catch (error) {
+      // If cache fetch fails, return error
+      console.error('Error fetching representatives:', error);
+      return NextResponse.json({ error: 'Failed to fetch representatives' }, { status: 500 });
+    }
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json({ error: 'Failed to fetch representatives' }, { status: 500 });
