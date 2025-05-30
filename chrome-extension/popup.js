@@ -17,49 +17,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusEl.textContent = 'Not connected to Outrage app';
   }
   
-  // Get active sessions
-  chrome.runtime.sendMessage({ action: 'getActiveSessions' }, (sessions) => {
-    if (sessions && sessions.length > 0) {
-      displaySessions(sessions);
-    }
-  });
 });
-
-function displaySessions(sessions) {
-  const contentEl = document.getElementById('content');
-  
-  let html = '<div class="section">';
-  html += '<div class="section-title">Active Sessions</div>';
-  
-  sessions.forEach(session => {
-    html += `
-      <div class="session-info">
-        <div class="session-item">
-          <span class="label">Representative:</span>
-          <span class="value">${session.representative.name}</span>
-        </div>
-        <div class="session-item">
-          <span class="label">Status:</span>
-          <span class="value">${getStatusLabel(session.status)}</span>
-        </div>
-        <div class="session-item">
-          <span class="label">Tab:</span>
-          <span class="value">${session.tabId}</span>
-        </div>
-      </div>
-    `;
-  });
-  
-  html += '</div>';
-  contentEl.innerHTML = html;
-}
-
-function getStatusLabel(status) {
-  const labels = {
-    pending: '⏳ Waiting',
-    filling: '✍️ Filling',
-    completed: '✅ Completed',
-    failed: '❌ Failed'
-  };
-  return labels[status] || status;
-}

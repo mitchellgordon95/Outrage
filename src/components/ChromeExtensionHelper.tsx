@@ -121,16 +121,56 @@ export default function ChromeExtensionHelper({
       return;
     }
     
-    // Show form to collect user data
-    setShowForm(true);
+    try {
+      // Prepare session data with pre-filled values
+      const sessionData = {
+        representatives,
+        sessionId,
+        prefilledData: {
+          name: formData.name,
+          address: formData.address,
+          email: formData.email,
+          phone: formData.phone
+        }
+      };
+      
+      // Encode the data as URL parameter
+      const encodedData = encodeURIComponent(JSON.stringify(sessionData));
+      
+      // Send message to extension to open form-fill page
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        {
+          action: 'openFormFillPage',
+          data: encodedData
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Extension communication error:', chrome.runtime.lastError);
+            // Fall back to inline form
+            setShowForm(true);
+          } else if (response && response.success) {
+            // Successfully opened form page
+            console.log('Form page opened successfully');
+          } else {
+            // Fall back to inline form
+            setShowForm(true);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error preparing form data:', error);
+      // Fall back to inline form
+      setShowForm(true);
+    }
   };
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields only
-    if (!formData.name || !formData.address) {
-      alert('Please fill in your name and address');
+    // Validate required fields
+    if (!formData.name || !formData.address || !formData.email) {
+      alert('Please fill in your name, address, and email');
       return;
     }
     
@@ -274,7 +314,7 @@ export default function ChromeExtensionHelper({
               
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email (optional)
+                  Email *
                 </label>
                 <input
                   type="email"
@@ -282,6 +322,7 @@ export default function ChromeExtensionHelper({
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
               

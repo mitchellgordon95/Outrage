@@ -94,6 +94,12 @@ async function fillForm(formAnalysis, userData) {
     // Show filling indicator
     showStatus('Filling form...');
     
+    // Notify background that we're filling
+    chrome.runtime.sendMessage({
+      action: 'updateFormStatus',
+      data: { status: 'filling' }
+    });
+    
     // Check if fieldMappings exists and is an object
     if (!fieldMappings || typeof fieldMappings !== 'object') {
       console.error('Invalid fieldMappings:', fieldMappings);

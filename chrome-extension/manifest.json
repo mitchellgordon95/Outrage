@@ -44,5 +44,11 @@
   },
   "externally_connectable": {
     "matches": ["http://localhost:3000/*", "https://*.outrage.app/*"]
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["form-fill.html", "form-fill.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

@@ -15,6 +15,17 @@ chrome.runtime.onMessageExternal.addListener(
         .then(response => sendResponse({ success: true, data: response }))
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true; // Will respond asynchronously
+    } else if (request.action === 'openFormFillPage') {
+      // Open the form fill page with session data
+      chrome.tabs.create({
+        url: chrome.runtime.getURL(`form-fill.html?data=${request.data}`),
+        active: true
+      }).then(() => {
+        sendResponse({ success: true });
+      }).catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+      return true; // Will respond asynchronously
     }
   }
 );
@@ -28,6 +39,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse(sessionData || null);
   } else if (request.action === 'formFilled') {
     handleFormCompletion(sender.tab?.id, request.data);
+  } else if (request.action === 'updateFormStatus') {
+    // Update status for a specific tab
+    if (sender.tab?.id) {
+      const sessionData = formSessions.get(sender.tab.id);
+      if (sessionData && request.data.status) {
+        sessionData.status = request.data.status;
+        formSessions.set(sender.tab.id, sessionData);
+        
+        // Forward to form-fill page
+        chrome.runtime.sendMessage({
+          action: 'updateFormStatus',
+          data: {
+            repIndex: sessionData.repIndex,
+            status: request.data.status
+          }
+        }).catch(() => {
+          // Ignore error if no listener
+        });
+      }
+    }
   } else if (request.action === 'analyzeForm') {
     analyzeForm(request.url, sender.tab?.id)
       .then(analysis => sendResponse({ success: true, data: analysis }))
@@ -43,6 +74,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'ping') {
     // For extension detection
     sendResponse({ pong: true });
+  } else if (request.action === 'storeFormSession') {
+    // Store session data for a tab (from form-fill page)
+    formSessions.set(request.tabId, request.data);
+    sendResponse({ success: true });
   }
 });
 
@@ -135,8 +170,18 @@ function handleFormCompletion(tabId, data) {
     formSessions.set(tabId, sessionData);
     
     // Notify the web app about completion
-    // You could implement a webhook or store results for later retrieval
     console.log(`Form ${data.success ? 'completed' : 'failed'} for ${sessionData.representative.name}`);
+    
+    // Send status update to form-fill page if it's open
+    chrome.runtime.sendMessage({
+      action: 'updateFormStatus',
+      data: {
+        repIndex: sessionData.repIndex,
+        status: sessionData.status
+      }
+    }).catch(() => {
+      // Ignore error if no listener
+    });
   }
 }
 
