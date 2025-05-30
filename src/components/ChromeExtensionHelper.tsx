@@ -459,6 +459,24 @@ export default function ChromeExtensionHelper({
         {filling ? 'Opening Forms...' : 'Fill Web Forms'}
       </button>
       
+      <div className="mt-2">
+        <button
+          onClick={() => {
+            // Open each web form in a new tab for manual copy/paste
+            activeWebFormReps.forEach((rep, index) => {
+              if (rep.webFormUrl) {
+                setTimeout(() => {
+                  window.open(rep.webFormUrl, '_blank');
+                }, index * 500); // 500ms delay between each window.open call
+              }
+            });
+          }}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Copy & Paste Manually
+        </button>
+      </div>
+      
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
