@@ -43,6 +43,7 @@ export default function ChromeExtensionHelper({
     phone: ''
   });
   const [emailsSent, setEmailsSent] = useState(false);
+  const [extensionJustDetected, setExtensionJustDetected] = useState(false);
   
   // Use different extension IDs for development and production
   const EXTENSION_ID = process.env.NODE_ENV === 'production' 
@@ -82,7 +83,31 @@ export default function ChromeExtensionHelper({
         address: storedAddress
       }));
     }
-  }, []);
+    
+    // Listen for page visibility changes (user switching tabs/windows)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !extensionInstalled) {
+        console.log('Page became visible, rechecking extension...');
+        checkExtensionInstalled();
+      }
+    };
+    
+    // Listen for window focus (user clicking back to the window)
+    const handleFocus = () => {
+      if (!extensionInstalled) {
+        console.log('Window focused, rechecking extension...');
+        checkExtensionInstalled();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [extensionInstalled]);
   
   const checkExtensionInstalled = () => {
     console.log('Checking extension with ID:', EXTENSION_ID);
@@ -109,6 +134,11 @@ export default function ChromeExtensionHelper({
               setExtensionInstalled(false);
             } else if (response && response.pong) {
               console.log('Extension detected successfully!');
+              if (!extensionInstalled) {
+                setExtensionJustDetected(true);
+                // Clear the "just detected" state after a few seconds
+                setTimeout(() => setExtensionJustDetected(false), 5000);
+              }
               setExtensionInstalled(true);
             } else {
               console.error('Unexpected response from extension:', response);
@@ -326,6 +356,12 @@ export default function ChromeExtensionHelper({
           >
             {process.env.NODE_ENV === 'production' ? 'Install Extension →' : 'Load Development Extension →'}
           </a>
+        </div>
+      )}
+      
+      {extensionJustDetected && (
+        <div className="mb-4 p-3 bg-green-100 rounded text-sm text-green-800 animate-pulse">
+          <strong>✓ Extension Detected!</strong> The Outrage Form Filler extension is now ready to use.
         </div>
       )}
       
