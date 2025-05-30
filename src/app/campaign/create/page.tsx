@@ -129,10 +129,6 @@ export default function CreateCampaignPage() {
       setError('Cannot create a campaign with no demands.');
       return;
     }
-    if (selectedCampaignReps.length === 0) {
-      setError('Cannot create a campaign with no representatives selected.');
-      return;
-    }
 
     setIsLoading(true);
 
@@ -205,25 +201,99 @@ export default function CreateCampaignPage() {
           </div>
 
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Pre-Selected Representatives:</h2>
-            <p className="text-sm text-gray-600 mb-3">Users can add more</p>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Pre-Selected Representatives (Optional):</h2>
+            <p className="text-sm text-gray-600 mb-3">Choose representatives to suggest. Users can always add more.</p>
             {representatives.length > 0 ? (
-              <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                {representatives.map((rep, index) => (
-                  <div key={rep.id || index} className="flex items-center text-gray-700 mb-1 p-2 border-b last:border-b-0">
-                    <input
-                      type="checkbox"
-                      id={`rep-${rep.id || index}`}
-                      name={rep.name}
-                      checked={selectedCampaignReps.some(r => r.id === rep.id)}
-                      onChange={() => handleToggleRepresentative(rep)}
-                      className="mt-1 mr-2 h-4 w-4 text-primary accent-primary"
-                    />
-                    <label htmlFor={`rep-${rep.id || index}`}>{rep.name}</label>
-                    {/* Optionally display more rep info if available and needed */}
-                    {/* rep.party ? `(${rep.party})` : '' */}
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {representatives.map((rep, index) => {
+                  const isSelected = selectedCampaignReps.some(r => r.id === rep.id);
+                  
+                  // Level-based colors
+                  const levelColors = {
+                    local: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+                    state: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                    country: 'bg-amber-50 border-amber-200 text-amber-700'
+                  };
+                  
+                  const colorClass = levelColors[rep.level || 'local'];
+                  
+                  return (
+                    <div 
+                      key={rep.id || index} 
+                      className={`flex items-center p-3 border rounded-md transition-all ${
+                        isSelected 
+                          ? `${colorClass} ring-2 ring-offset-1 ${
+                              rep.level === 'local' ? 'ring-indigo-400' :
+                              rep.level === 'state' ? 'ring-emerald-400' :
+                              'ring-amber-400'
+                            }`
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`rep-${rep.id || index}`}
+                        name={rep.name}
+                        checked={isSelected}
+                        onChange={() => handleToggleRepresentative(rep)}
+                        className="mr-3 h-4 w-4 text-primary accent-primary"
+                      />
+                      <label 
+                        htmlFor={`rep-${rep.id || index}`} 
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Photo */}
+                          <div className="flex-shrink-0">
+                            {rep.photoUrl ? (
+                              <img 
+                                src={rep.photoUrl} 
+                                alt={`Photo of ${rep.name}`}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null;
+                                  target.parentElement!.innerHTML = `
+                                    <div class="w-10 h-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                      ${rep.name.charAt(0)}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center text-gray-500 font-medium">
+                                {rep.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className={`font-medium ${isSelected ? '' : 'text-gray-900'}`}>
+                              {rep.office}
+                            </div>
+                            <div className={`text-sm ${isSelected ? 'opacity-90' : 'text-gray-600'}`}>
+                              {rep.name}
+                              {rep.party && (
+                                <span className="ml-2 text-xs">
+                                  ({rep.party})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Level indicator */}
+                          <div className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            rep.level === 'local' ? 'bg-indigo-100 text-indigo-700' :
+                            rep.level === 'state' ? 'bg-emerald-100 text-emerald-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {rep.level === 'country' ? 'Federal' : rep.level || 'Local'}
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-500">No representatives selected.</p>
@@ -293,7 +363,7 @@ export default function CreateCampaignPage() {
 
           <button
             type="submit"
-            disabled={isLoading || !title.trim() || demands.length === 0 || selectedCampaignReps.length === 0}
+            disabled={isLoading || !title.trim() || demands.length === 0}
             className="w-full py-3 px-6 bg-primary text-white font-semibold rounded-md shadow-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {isLoading && (

@@ -41,9 +41,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Demands cannot be empty.' }, { status: 400 });
     }
 
-    if (representatives.length === 0) {
-        return NextResponse.json({ error: 'Representatives cannot be empty.' }, { status: 400 });
-    }
 
 
     // Create a new Pool instance
