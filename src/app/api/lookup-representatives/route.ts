@@ -160,9 +160,32 @@ async function fetchRepresentativesFromCicero(address: string): Promise<Represen
         // No more detailed logging needed
         
         // Get the office title using the correct properties from the API
-        let officeTitle = official.office?.title || 
-                        official.office?.chamber?.name || 
-                        'Unknown';
+        const rawOfficeTitle = official.office?.title || 
+                             official.office?.chamber?.name || 
+                             'Unknown';
+        
+        // Log to debug the title issue
+        if (rawOfficeTitle.toLowerCase().includes('senator')) {
+          console.log(`Senator detected - Name: ${name}, Raw title: ${rawOfficeTitle}, Level: ${level}, Chamber type: ${official.office?.chamber?.type}, District type: ${official.office?.district?.district_type}`);
+        }
+        
+        // For senators and representatives, clarify if they're state or federal
+        let officeTitle = rawOfficeTitle;
+        const titleLower = rawOfficeTitle.toLowerCase();
+        
+        if (titleLower === 'senator') {
+          if (level === 'country') {
+            officeTitle = 'U.S. Senator';
+          } else if (level === 'state') {
+            officeTitle = 'State Senator';
+          }
+        } else if (titleLower === 'representative' || titleLower === 'assembly member' || titleLower === 'assemblymember') {
+          if (level === 'country') {
+            officeTitle = 'U.S. Representative';
+          } else if (level === 'state') {
+            officeTitle = `State ${rawOfficeTitle}`;
+          }
+        }
         
         // Add location information to the title
         const city = official.office?.representing_city;

@@ -350,92 +350,109 @@ export default function DraftPreviewPage() {
         {/* Active Campaign Banner */}
         <ActiveCampaignBanner />
         
-        <h1 className="text-2xl font-bold mb-6">Email Draft Preview</h1>
+        <h1 className="text-2xl font-bold mb-6">Draft Preview</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Recipients - Left Column */}
-          <div className="md:col-span-1">
-            <h2 className="text-lg font-semibold mb-2">
-              Recipients ({representatives.length})
-            </h2>
-            
-            <div className="border border-gray-200 rounded-md overflow-hidden">
+        <div className="space-y-6">
+          {/* To Section with Selectable Cards */}
+          <div>
+            <h2 className="text-lg font-semibold mb-3">To</h2>
+            <div className="flex flex-wrap gap-2">
               {representatives.map((rep, index) => {
                 const draft = drafts.get(index);
                 const isSelected = selectedRepIndex === index;
+                
+                // Color coding based on level
+                const levelColors = {
+                  local: isSelected 
+                    ? 'bg-indigo-600 border-indigo-700 text-white' 
+                    : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100',
+                  state: isSelected 
+                    ? 'bg-emerald-600 border-emerald-700 text-white' 
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100',
+                  country: isSelected 
+                    ? 'bg-amber-600 border-amber-700 text-white' 
+                    : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                };
+                
+                const colorClass = levelColors[rep.level || 'local'];
                 
                 return (
                   <button
                     key={index}
                     onClick={() => setSelectedRepIndex(index)}
-                    className={`w-full py-2 px-3 text-left border-b border-gray-200 last:border-b-0 flex justify-between items-center hover:bg-gray-50 ${
-                      isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                    }`}
+                    className={`px-3 py-2 border rounded-md transition-all text-left flex items-center gap-2 ${colorClass}`}
                   >
-                    <div className="flex items-center">
-                      <div className="mr-2 flex-shrink-0">
-                        {rep.photoUrl ? (
-                          <img 
-                            src={rep.photoUrl} 
-                            alt={`Photo of ${rep.name}`}
-                            className="w-6 h-6 rounded-full object-cover border border-gray-200"
-                            onError={(e) => {
-                              // Replace broken images with placeholder
-                              const target = e.target as HTMLImageElement;
-                              target.onerror = null;
-                              target.parentElement!.innerHTML = `
-                                <div class="w-6 h-6 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
-                                  ${rep.name.charAt(0)}
-                                </div>
-                              `;
-                            }}
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
-                            {rep.name.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium truncate">{rep.name}</div>
-                        {rep.contacts && rep.contacts.length > 0 && (
-                          <div className="flex items-center mt-1 text-xs text-gray-500">
-                            {rep.contacts.map((contact, i) => (
-                              <span key={i} className="mr-2">
-                                {contact.type === 'email' ? '✉️' : 
-                                 contact.type === 'webform' ? '🌐' : 
-                                 contact.type === 'facebook' ? '📘' :
-                                 contact.type === 'twitter' ? '🐦' :
-                                 contact.type === 'instagram' ? '📸' :
-                                 '📞'}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      {draft?.status === 'loading' && (
-                        <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin ml-2"></div>
-                      )}
-                      {draft?.status === 'error' && (
-                        <div className="text-red-500 ml-2">!</div>
+                    {/* Photo */}
+                    <div className="flex-shrink-0">
+                      {rep.photoUrl ? (
+                        <img 
+                          src={rep.photoUrl} 
+                          alt={`Photo of ${rep.name}`}
+                          className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.parentElement!.innerHTML = `
+                              <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
+                                ${rep.name.charAt(0)}
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center text-gray-500 font-medium text-xs">
+                          {rep.name.charAt(0)}
+                        </div>
                       )}
                     </div>
+                    
+                    {/* Info */}
+                    <div className="flex-1 text-sm">
+                      <div className={`font-medium ${isSelected ? 'text-white' : ''}`}>
+                        {rep.office} {rep.name}
+                      </div>
+                      
+                      {/* Contact methods */}
+                      {rep.contacts && rep.contacts.length > 0 && (
+                        <div className="flex items-center gap-0.5 mt-0.5">
+                          {rep.contacts.map((contact, i) => (
+                            <span key={i} className="text-xs">
+                              {contact.type === 'email' ? '✉️' : 
+                               contact.type === 'webform' ? '🌐' : 
+                               contact.type === 'facebook' ? '📘' :
+                               contact.type === 'twitter' ? '🐦' :
+                               contact.type === 'instagram' ? '📸' :
+                               '📞'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Status indicators */}
+                    {draft?.status === 'loading' && (
+                      <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
+                        isSelected 
+                          ? 'border-white/30 border-t-white' 
+                          : 'border-gray-300 border-t-gray-600'
+                      }`}></div>
+                    )}
+                    {draft?.status === 'error' && (
+                      <span className={`text-xs font-bold ${isSelected ? 'text-red-200' : 'text-red-600'}`}>!</span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
           
-          {/* Email Draft - Right Column */}
-          <div className="md:col-span-2">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="w-8 h-8 border-4 border-gray-300 border-t-primary rounded-full animate-spin"></div>
-              </div>
-            ) : currentDraft ? (
-              <div className="border border-gray-300 rounded-md p-4">
+          {/* Draft Display */}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="w-8 h-8 border-4 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+            </div>
+          ) : currentDraft ? (
+            <div className="border border-gray-300 rounded-md p-4">
                 {currentDraft.status === 'loading' ? (
                   <div className="flex flex-col items-center justify-center h-64">
                     <div className="w-8 h-8 border-4 border-gray-300 border-t-primary rounded-full animate-spin mb-4"></div>
@@ -458,16 +475,6 @@ export default function DraftPreviewPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="mb-4">
-                      <h2 className="text-lg font-semibold mb-2">To</h2>
-                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                        {selectedRepIndex !== null && representatives[selectedRepIndex] ? 
-                          `${representatives[selectedRepIndex].office} ${representatives[selectedRepIndex].name}` : 
-                          'Representative'
-                        }
-                      </div>
-                    </div>
-                    
                     <div className="mb-4">
                       <h2 className="text-lg font-semibold mb-2">Subject</h2>
                       <div className="bg-gray-50 p-3 rounded border border-gray-200">
@@ -542,12 +549,11 @@ export default function DraftPreviewPage() {
                   </>
                 )}
               </div>
-            ) : (
-              <div className="flex justify-center items-center h-64 text-gray-500">
-                Select a representative to view their draft
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="flex justify-center items-center h-64 text-gray-500">
+              Select a representative to view their draft
+            </div>
+          )}
         </div>
         
         <div className="flex justify-between mt-8">
