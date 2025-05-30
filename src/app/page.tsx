@@ -304,7 +304,11 @@ export default function Home() {
         ) : popularCampaigns.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {popularCampaigns.map((campaign) => (
-              <div key={campaign.id} className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between">
+              <Link 
+                key={campaign.id} 
+                href={`/campaign/${campaign.id}`}
+                className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow"
+              >
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-2 truncate" title={campaign.title}>
                     {campaign.title}
@@ -320,12 +324,11 @@ export default function Home() {
                   <p className="text-md font-semibold text-gray-700">
                     Messages Sent: {campaign.message_sent_count}
                   </p>
-                  {/* Optional: Link to campaign detail page */}
-                  {/* <Link href={`/campaign/${campaign.id}`} className="text-primary hover:underline mt-2 inline-block">
-                    View Details
-                  </Link> */}
+                  <span className="text-primary hover:underline mt-2 inline-block">
+                    View Details →
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
