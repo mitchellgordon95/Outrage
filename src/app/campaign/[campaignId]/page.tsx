@@ -31,10 +31,39 @@ export default function ViewCampaignPage({ params }: { params: { campaignId: str
   const [showAddressInput, setShowAddressInput] = useState(false);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [autoCompleteActive, setAutoCompleteActive] = useState(false);
 
   useEffect(() => {
     fetchCampaign();
   }, [params.campaignId]);
+
+  // Handle autocomplete keyboard navigation
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Check if the key is arrow down/up which activates autocomplete selection mode
+      if (e.target === addressInputRef.current && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        setAutoCompleteActive(true);
+      }
+      
+      // If Enter is pressed and we're in autocomplete selection mode, prevent default
+      if (e.key === 'Enter' && autoCompleteActive) {
+        e.preventDefault();
+      }
+    };
+    
+    // When user clicks anywhere else, we're no longer in autocomplete selection mode
+    const handleGlobalClick = () => {
+      setAutoCompleteActive(false);
+    };
+    
+    document.addEventListener('keydown', handleGlobalKeyDown, true);
+    document.addEventListener('click', handleGlobalClick);
+    
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown, true);
+      document.removeEventListener('click', handleGlobalClick);
+    };
+  }, [autoCompleteActive]);
 
   // Set up Google Maps autocomplete when showing address input
   useEffect(() => {
@@ -123,6 +152,11 @@ export default function ViewCampaignPage({ params }: { params: { campaignId: str
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address || !campaign) return;
+
+    // If we're in autocomplete selection mode, don't submit yet
+    if (autoCompleteActive) {
+      return;
+    }
 
     // Store address
     localStorage.setItem('userAddress', address);
@@ -276,6 +310,17 @@ export default function ViewCampaignPage({ params }: { params: { campaignId: str
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
+                    onKeyDown={(e) => {
+                      // When user starts navigating with arrow keys, we're in autocomplete mode
+                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        setAutoCompleteActive(true);
+                      }
+                      
+                      // If Enter is pressed during autocomplete, prevent form submission
+                      if (e.key === 'Enter' && autoCompleteActive) {
+                        e.preventDefault();
+                      }
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="123 Main St, City, State"
                     required
