@@ -147,13 +147,14 @@ export default function CreateCampaignPage() {
       const responseData = await response.json();
 
       if (response.ok) { // Typically 201 for created
-        alert(`Campaign created successfully! ID: ${responseData.id}`);
         if (responseData.id) {
           localStorage.setItem('activeCampaignId', responseData.id.toString());
+          // Redirect to the campaign view page
+          router.push(`/campaign/${responseData.id}`);
+        } else {
+          // Fallback if no ID returned
+          router.push('/');
         }
-        // Optional: Clear parts of localStorage related to the draft
-        // localStorage.removeItem('draftData'); // Or more specific keys
-        router.push('/'); // Redirect to home page
       } else {
         setError(responseData.error || `Error: ${response.status} ${response.statusText}`);
       }
