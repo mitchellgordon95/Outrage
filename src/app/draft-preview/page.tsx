@@ -270,10 +270,10 @@ export default function DraftPreviewPage() {
     // If there are web forms, show the extension helper
     if (webFormReps.length > 0) {
       setShowExtensionHelper(true);
-      return;
+      // Don't return here - we still need to handle emails!
     }
     
-    // Otherwise, just handle emails and social media
+    // Handle emails and social media
     const linksToOpen: LinkToOpen[] = [];
     
     emailReps.forEach(({ rep, draft }) => {
@@ -283,19 +283,47 @@ export default function DraftPreviewPage() {
     
     linksToOpen.push(...socialMediaLinks);
     
-    // Show confirmation with count of tabs to be opened
-    const emailCount = emailReps.length;
-    const twitterCount = socialMediaLinks.filter(link => link.type === 'twitter').length;
-    
-    const confirmMessage = `This will open:\n` + 
-      (emailCount > 0 ? `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` : '') +
-      (twitterCount > 0 ? `${twitterCount} Twitter ${twitterCount === 1 ? 'post' : 'posts'}\n` : '') +
-      `\nYour browser may block popups. Please allow popups for this site.`;
-    
-    if (confirm(confirmMessage)) {
-      // Increment campaign counter if activeCampaignId exists
+    // Only process email/social links if we have them
+    if (linksToOpen.length > 0) {
+      // Show confirmation with count of tabs to be opened
+      const emailCount = emailReps.length;
+      const twitterCount = socialMediaLinks.filter(link => link.type === 'twitter').length;
+      const webFormCount = webFormReps.length;
+      
+      const confirmMessage = `This will open:\n` + 
+        (emailCount > 0 ? `${emailCount} email ${emailCount === 1 ? 'draft' : 'drafts'}\n` : '') +
+        (twitterCount > 0 ? `${twitterCount} Twitter ${twitterCount === 1 ? 'post' : 'posts'}\n` : '') +
+        (webFormCount > 0 ? `\nPlus ${webFormCount} web ${webFormCount === 1 ? 'form' : 'forms'} via the Chrome extension\n` : '') +
+        `\nYour browser may block popups. Please allow popups for this site.`;
+      
+      if (confirm(confirmMessage)) {
+        // Increment campaign counter if activeCampaignId exists
+        if (campaignId) {
+          localStorage.removeItem('activeCampaignId'); // Remove immediately
+          try {
+            const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
+            if (!incrementResponse.ok) {
+              const errorData = await incrementResponse.json();
+              console.error('Failed to increment campaign count:', incrementResponse.status, errorData.error);
+            } else {
+              console.log(`Campaign ${campaignId} count incremented successfully.`);
+            }
+          } catch (err) {
+            console.error('Error during campaign increment fetch:', err);
+          }
+        }
+
+        // Open each link with a slight delay to avoid popup blockers
+        linksToOpen.forEach((link: LinkToOpen, i: number) => {
+          setTimeout(() => {
+            window.open(link.url, '_blank');
+          }, i * 500); // 500ms delay between each window.open call
+        });
+      }
+    } else if (webFormReps.length > 0) {
+      // Only web forms, no emails - still need to handle campaign increment
       if (campaignId) {
-        localStorage.removeItem('activeCampaignId'); // Remove immediately
+        localStorage.removeItem('activeCampaignId');
         try {
           const incrementResponse = await fetch(`/api/campaigns/${campaignId}/increment`, { method: 'POST' });
           if (!incrementResponse.ok) {
@@ -308,13 +336,6 @@ export default function DraftPreviewPage() {
           console.error('Error during campaign increment fetch:', err);
         }
       }
-
-      // Open each link with a slight delay to avoid popup blockers
-      linksToOpen.forEach((link: LinkToOpen, i: number) => {
-        setTimeout(() => {
-          window.open(link.url, '_blank');
-        }, i * 500); // 500ms delay between each window.open call
-      });
     }
   };
 
