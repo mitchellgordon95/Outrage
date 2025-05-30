@@ -201,10 +201,15 @@ async function isNotEmailDraft(responseText: string): Promise<boolean> {
       temperature: 0,
     });
     
-    const classification = response.content[0].text.trim().toUpperCase();
-    console.log('Email detection result:', classification);
+    const contentBlock = response.content[0];
+    if (contentBlock.type === 'text') {
+      const classification = contentBlock.text.trim().toUpperCase();
+      console.log('Email detection result:', classification);
+      return classification === 'NOT_EMAIL';
+    }
     
-    return classification === 'NOT_EMAIL';
+    // If it's not a text block, assume it's not a refusal
+    return false;
   } catch (error) {
     console.error('Error in refusal detection:', error);
     // Fall back to simple heuristic if LLM call fails

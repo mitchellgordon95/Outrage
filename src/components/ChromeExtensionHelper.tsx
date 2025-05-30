@@ -65,7 +65,7 @@ export default function ChromeExtensionHelper({
         const draftData = JSON.parse(draftDataStr);
         if (draftData.personalInfo) {
           // Personal info is stored as multi-line string, first line is the name
-          const lines = draftData.personalInfo.split('\n').filter(line => line.trim() !== '');
+          const lines = draftData.personalInfo.split('\n').filter((line: string) => line.trim() !== '');
           if (lines.length > 0) {
             setFormData(prev => ({
               ...prev,
@@ -194,6 +194,12 @@ export default function ChromeExtensionHelper({
       const encodedData = encodeURIComponent(JSON.stringify(sessionData));
       
       // Send message to extension to open form-fill page
+      if (!EXTENSION_ID) {
+        console.error('Extension ID not configured');
+        setShowForm(true);
+        return;
+      }
+      
       chrome.runtime.sendMessage(
         EXTENSION_ID,
         {
@@ -255,6 +261,11 @@ export default function ChromeExtensionHelper({
         });
       
       // Send message to extension to start filling forms
+      if (!EXTENSION_ID) {
+        console.error('Extension ID not configured');
+        return;
+      }
+      
       chrome.runtime.sendMessage(
         EXTENSION_ID,
         {

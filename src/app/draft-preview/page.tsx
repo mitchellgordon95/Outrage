@@ -587,7 +587,7 @@ export default function DraftPreviewPage() {
                     }
                     return null;
                   })
-                  .filter((rep): rep is Representative => rep !== null)
+                  .filter((rep): rep is NonNullable<typeof rep> => rep !== null)
                 }
                 emailRepresentatives={representatives
                   .map((rep, index) => {
