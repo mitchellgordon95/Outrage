@@ -124,11 +124,12 @@ export default function IssueDetailsPage() {
       aiRefinedReps: Array.from(aiRefinedReps),
       selectionSummary,
       selectionExplanations,
-      activeMode: pickMode
+      activeMode: pickMode,
+      campaignPreSelectedReps: campaignPreSelectedReps
     };
 
     localStorage.setItem('draftData', JSON.stringify(updatedData));
-  }, [demands, personalInfo, manualSelectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode, currentSelectedReps]);
+  }, [demands, personalInfo, manualSelectedReps, aiSelectedReps, aiRefinedReps, address, selectionSummary, selectionExplanations, pickMode, currentSelectedReps, campaignPreSelectedReps]);
 
   // Auto-trigger AI selection when conditions are met
   useEffect(() => {
