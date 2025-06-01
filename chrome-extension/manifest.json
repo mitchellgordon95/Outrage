@@ -4,9 +4,7 @@
   "version": "1.0.0",
   "description": "Automatically fill out representative contact forms",
   "permissions": [
-    "activeTab",
-    "storage",
-    "tabs"
+    "activeTab"
   ],
   "host_permissions": [
     "https://*.senate.gov/*",
