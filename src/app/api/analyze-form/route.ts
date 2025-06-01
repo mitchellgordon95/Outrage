@@ -16,6 +16,11 @@ interface FormAnalysis {
   parsedData?: any;
 }
 
+// Extended type for internal use with cache tracking
+interface FormAnalysisWithCache extends FormAnalysis {
+  _cacheHit?: boolean;
+}
+
 // Create a deterministic cache key from URL and user data
 function createCacheKey(url: string, userData: any): string {
   const data = {
@@ -67,14 +72,20 @@ export async function POST(request: NextRequest) {
       
       console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
       
-      // Add cache status to response headers
-      const response = NextResponse.json(formAnalysis, { headers });
-      response.headers.set('X-Cache-Status', formAnalysis._cacheHit ? 'HIT' : 'MISS');
+      // Check if the result has a cache hit indicator
+      const isCacheHit = formAnalysis._cacheHit === true;
       
-      // Remove internal cache flag before sending response
-      if (formAnalysis._cacheHit) {
-        delete formAnalysis._cacheHit;
-      }
+      // Create a clean response object without the cache flag
+      const responseData: FormAnalysis = {
+        fieldMappings: formAnalysis.fieldMappings,
+        formSelector: formAnalysis.formSelector,
+        submitSelector: formAnalysis.submitSelector,
+        parsedData: formAnalysis.parsedData
+      };
+      
+      // Add cache status to response headers
+      const response = NextResponse.json(responseData, { headers });
+      response.headers.set('X-Cache-Status', isCacheHit ? 'HIT' : 'MISS');
       
       return response;
     } catch (error) {
@@ -205,7 +216,7 @@ async function analyzeFormCore(
 // Cached version of form analysis
 // Cache for 7 days since form structures rarely change
 const getCachedFormAnalysis = unstable_cache(
-  async (cacheKey: string, url: string, userData: any, representative: any): Promise<FormAnalysis> => {
+  async (cacheKey: string, url: string, userData: any, representative: any): Promise<FormAnalysisWithCache> => {
     console.log(`[CACHE MISS] Analyzing form for cache key: ${cacheKey.substring(0, 8)}...`);
     
     const analysis = await analyzeFormCore(url, userData, representative);

@@ -16,6 +16,7 @@ export interface DraftData {
   personalInfoCompleted?: boolean;
   selectionSummary?: string;
   selectionExplanations?: Record<string, string>;
+  demandsUsedForAiSelection?: string[]; // Demands used for AI selection
   campaignPreSelectedReps?: {id: string; name: string}[]; // Pre-selected reps from campaign
   activeCampaignId?: number;
   demandsCompleted?: boolean;
