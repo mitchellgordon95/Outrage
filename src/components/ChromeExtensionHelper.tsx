@@ -50,8 +50,14 @@ export default function ChromeExtensionHelper({
   
   // Use different extension IDs for development and production
   const EXTENSION_ID = process.env.NODE_ENV === 'production' 
-    ? process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD
+    ? process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD || 'jccljdfjnchnehmnddhomhelnplggjjk'
     : process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID_DEV;
+  
+  // Log the extension ID for debugging
+  useEffect(() => {
+    console.log('Extension ID:', EXTENSION_ID);
+    console.log('Environment:', process.env.NODE_ENV);
+  }, []);
   
   useEffect(() => {
     // Check if extension is installed
@@ -118,6 +124,7 @@ export default function ChromeExtensionHelper({
     
     if (!EXTENSION_ID || EXTENSION_ID === 'extension_id') {
       console.error('Extension ID not properly configured in environment variables');
+      console.error('Please set NEXT_PUBLIC_CHROME_EXTENSION_ID_PROD in your production environment');
       setExtensionInstalled(false);
       return;
     }

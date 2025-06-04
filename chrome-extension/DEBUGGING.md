@@ -47,7 +47,7 @@ Common errors:
 ### 5. Verify URL Match
 The extension only accepts messages from:
 - `http://localhost:3000/*`
-- `https://*.outrage.app/*`
+- `https://*.outrage.gg/*`
 
 Make sure you're accessing the app via `http://localhost:3000` (not `127.0.0.1` or another port).
 
