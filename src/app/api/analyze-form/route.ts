@@ -38,7 +38,11 @@ function createCacheKey(url: string, userData: any): string {
 }
 
 export async function POST(request: NextRequest) {
-  // Add CORS headers for extension access
+  // Get the origin of the request
+  const origin = request.headers.get('origin') || '';
+  
+  // Chrome extensions often don't send origin header from background scripts
+  // So we need to be permissive for now
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -51,12 +55,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { url, userData, representative } = await request.json();
+    const body = await request.json();
+    console.log('Analyze form request received:', {
+      url: body.url,
+      hasUserData: !!body.userData,
+      representative: body.representative?.name,
+      origin: origin || 'no-origin',
+      userAgent: request.headers.get('user-agent')
+    });
+    
+    const { url, userData, representative } = body;
 
     if (!url || !userData) {
+      console.error('Missing required fields:', { url: !!url, userData: !!userData });
       return NextResponse.json(
         { error: 'Missing required fields: url and userData' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
