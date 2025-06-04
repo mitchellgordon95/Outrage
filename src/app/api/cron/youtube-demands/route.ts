@@ -52,28 +52,85 @@ function isAuthorizedCronRequest(request: Request): boolean {
   return true;
 }
 
-// Fetch recent videos from a YouTube channel
+// Fetch recent videos from a YouTube channel (excluding Shorts)
 async function fetchChannelVideos(channelId: string): Promise<YouTubeVideo[]> {
   try {
-    const params = new URLSearchParams({
+    // Convert channel ID to uploads playlist ID (excluding Shorts)
+    // UC... -> UULF... to get only long-form videos
+    let playlistId: string;
+    if (channelId.startsWith('UC')) {
+      playlistId = 'UULF' + channelId.substring(2);
+      console.log(`Fetching long-form videos from playlist: ${playlistId} (channel: ${channelId})`);
+    } else {
+      // Fallback to regular uploads playlist if not a UC channel
+      playlistId = 'UU' + channelId.substring(2);
+      console.log(`Channel ID doesn't start with UC, using regular uploads: ${playlistId}`);
+    }
+    
+    // Fetch videos from the playlist
+    const playlistParams = new URLSearchParams({
       key: YOUTUBE_API_KEY!,
-      channelId: channelId,
+      playlistId: playlistId,
       part: 'snippet',
-      order: 'date',
-      maxResults: VIDEOS_PER_CHANNEL.toString(),
-      type: 'video'
+      maxResults: VIDEOS_PER_CHANNEL.toString()
     });
 
-    const response = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
+    const playlistResponse = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${playlistParams}`);
     
-    if (!response.ok) {
-      console.error(`YouTube API error for channel ${channelId}:`, response.status);
+    if (!playlistResponse.ok) {
+      // If UULF playlist doesn't exist, fall back to regular uploads
+      if (playlistResponse.status === 404 && playlistId.startsWith('UULF')) {
+        console.log('UULF playlist not found, falling back to regular uploads playlist');
+        playlistId = 'UU' + channelId.substring(2);
+        
+        const fallbackParams = new URLSearchParams({
+          key: YOUTUBE_API_KEY!,
+          playlistId: playlistId,
+          part: 'snippet',
+          maxResults: VIDEOS_PER_CHANNEL.toString()
+        });
+        
+        const fallbackResponse = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${fallbackParams}`);
+        
+        if (!fallbackResponse.ok) {
+          console.error(`YouTube API error for playlist ${playlistId}:`, fallbackResponse.status);
+          return [];
+        }
+        
+        const fallbackData = await fallbackResponse.json();
+        
+        // Log all videos from fallback playlist
+        if (fallbackData.items && fallbackData.items.length > 0) {
+          console.log(`Found ${fallbackData.items.length} videos from fallback playlist ${playlistId}:`);
+          fallbackData.items.forEach((item: any, index: number) => {
+            console.log(`  ${index + 1}. "${item.snippet.title}" - Video ID: ${item.snippet.resourceId.videoId}`);
+          });
+        }
+        
+        return fallbackData.items.map((item: any) => ({
+          id: item.snippet.resourceId.videoId,
+          snippet: item.snippet
+        }));
+      }
+      
+      console.error(`YouTube API error for playlist ${playlistId}:`, playlistResponse.status);
       return [];
     }
 
-    const data = await response.json();
-    return data.items.map((item: any) => ({
-      id: item.id.videoId,
+    const playlistData = await playlistResponse.json();
+    
+    // Log all videos for debugging
+    if (playlistData.items && playlistData.items.length > 0) {
+      console.log(`Found ${playlistData.items.length} videos from playlist ${playlistId}:`);
+      playlistData.items.forEach((item: any, index: number) => {
+        console.log(`  ${index + 1}. "${item.snippet.title}" - Video ID: ${item.snippet.resourceId.videoId}`);
+      });
+    } else {
+      console.log(`No videos found in playlist ${playlistId}`);
+    }
+    
+    return playlistData.items.map((item: any) => ({
+      id: item.snippet.resourceId.videoId,
       snippet: item.snippet
     }));
   } catch (error) {
