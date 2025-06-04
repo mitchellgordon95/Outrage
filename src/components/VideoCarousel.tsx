@@ -3,6 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import VideoModal from './VideoModal';
 
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  const textArea = document.createElement('textarea');
+  textArea.innerHTML = text;
+  return textArea.value;
+}
+
 interface VideoDemand {
   id: string;
   text: string;
@@ -65,7 +72,7 @@ export default function VideoCarousel({ title, videos, onSelectDemand, selectedD
   return (
     <>
       <div className="mb-6 relative group">
-        <h3 className="text-lg font-medium text-gray-700 mb-3">{title}</h3>
+        <h3 className="text-lg font-medium text-gray-700 mb-3">{decodeHtmlEntities(title)}</h3>
         
         <div className="relative">
           {/* Left Arrow */}
@@ -128,7 +135,7 @@ export default function VideoCarousel({ title, videos, onSelectDemand, selectedD
                   {/* Video Info */}
                   <div className="p-4">
                     <h4 className="font-medium text-gray-800 line-clamp-2 text-left mb-2">
-                      {video.title}
+                      {decodeHtmlEntities(video.title)}
                     </h4>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">
@@ -159,8 +166,8 @@ export default function VideoCarousel({ title, videos, onSelectDemand, selectedD
           isOpen={!!selectedVideo}
           onClose={() => setSelectedVideo(null)}
           videoId={selectedVideo.videoId}
-          videoTitle={selectedVideo.title}
-          channelTitle={selectedVideo.channelTitle}
+          videoTitle={decodeHtmlEntities(selectedVideo.title)}
+          channelTitle={decodeHtmlEntities(selectedVideo.channelTitle)}
           demands={selectedVideo.demands}
           selectedDemands={selectedDemands}
           onSelectDemand={onSelectDemand}

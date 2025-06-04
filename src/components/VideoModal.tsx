@@ -2,6 +2,13 @@
 
 import { useEffect } from 'react';
 
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  const textArea = document.createElement('textarea');
+  textArea.innerHTML = text;
+  return textArea.value;
+}
+
 interface Demand {
   id: string;
   text: string;
@@ -54,7 +61,7 @@ export default function VideoModal({
       />
       
       {/* Modal Content */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="relative bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <button
@@ -70,21 +77,23 @@ export default function VideoModal({
         </div>
         
         {/* Scrollable Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-          {/* YouTube Embed */}
-          <div className="aspect-video bg-black">
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title={videoTitle}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+          {/* YouTube Embed - contained with padding */}
+          <div className="max-w-3xl mx-auto mb-6">
+            <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+              <iframe
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title={videoTitle}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
           </div>
           
           {/* Demands Section */}
-          <div className="p-6">
+          <div className="max-w-3xl mx-auto">
             <h3 className="text-lg font-semibold mb-4">
               Political Issues from This Video ({demands.length})
             </h3>
@@ -107,7 +116,7 @@ export default function VideoModal({
                     >
                       <div className="flex items-center justify-between">
                         <p className={`font-medium ${isSelected ? 'text-white' : 'text-gray-800'}`}>
-                          {demand.text}
+                          {decodeHtmlEntities(demand.text)}
                         </p>
                         <span className={`ml-2 ${isSelected ? 'text-white' : 'text-primary'}`}>
                           {isSelected ? '✓' : '+'}
