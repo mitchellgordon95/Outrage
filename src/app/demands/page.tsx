@@ -203,14 +203,21 @@ export default function DemandsPage() {
           </div>
         </div>
         
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            {hasCampaign ? 'Campaign Demands' : 'What Do You Care About?'}
-          </h2>
+        <div className="mb-6">
+          <div className="flex justify-between items-start mb-3">
+            <h2 className="text-2xl font-bold">
+              {hasCampaign ? 'Campaign Demands' : 'What Do You Care About?'}
+            </h2>
+            {demands.length > 0 && (
+              <span className="px-3 py-1 bg-primary text-white text-sm rounded-full font-medium">
+                {demands.length} selected
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mb-6">
             {hasCampaign 
               ? 'These are the demands included in this campaign. They cannot be modified while using the campaign.'
-              : 'Enter specific demands or issues you want your elected officials to address. Feel free to be informal and direct - short, passionate statements often work best!'
+              : 'Add your own demands or select from popular issues below. Be specific and direct - your representatives need to know exactly what you want!'
             }
           </p>
 
@@ -292,31 +299,36 @@ export default function DemandsPage() {
             </button>
           )}
 
-          {/* Demand Categories Carousel - only show when not using campaign */}
-          {!hasCampaign && (
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-4">Browse Issues by Category</h3>
-              
-              {categoriesLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {categories.map(category => (
-                    <DemandCarousel
-                      key={category.id}
-                      title={category.title}
-                      demands={category.demands}
-                      onSelectDemand={handleSelectDemand}
-                      selectedDemands={demands}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
+        
+        {/* Explore Issues Section - only show when not using campaign */}
+        {!hasCampaign && (
+          <div className="mt-10 -mx-6 md:-mx-8 px-6 md:px-8 pt-8 pb-6 bg-gray-50 border-t border-gray-200">
+            <h2 className="text-2xl font-bold mb-6">Explore Issues</h2>
+            
+            {categoriesLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              </div>
+            ) : categories.length > 0 ? (
+              <div className="space-y-8">
+                {categories.map(category => (
+                  <DemandCarousel
+                    key={category.id}
+                    title={category.title}
+                    demands={category.demands}
+                    onSelectDemand={handleSelectDemand}
+                    selectedDemands={demands}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No issues available at the moment. Check back later!</p>
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Action Buttons */}
         <div className="mt-8 mb-4 flex gap-4">
