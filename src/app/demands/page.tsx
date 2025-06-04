@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseDraftData } from '@/utils/navigation';
-import IssueCategory from '@/components/IssueCategory';
 import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 
 export default function DemandsPage() {
@@ -105,7 +104,6 @@ export default function DemandsPage() {
     }
   };
 
-  // toggleCategory function removed as it's now handled by the IssueCategory component
 
   const addIssue = (issue: string) => {
     if (!demands.includes(issue)) {
@@ -273,151 +271,47 @@ export default function DemandsPage() {
           {/* Issue Categories - only show when not using campaign */}
           {!hasCampaign && (
             <>
-              {/* Economy Category */}
-              <IssueCategory
-            title="Economy & Business"
-            category="economy"
-            previewIssues={[
-              "End the trade war by eliminating tariffs",
-              "Lower property taxes for homeowners",
-              "Increase the minimum wage to $15 per hour"
-            ]}
-            moreIssues={[
-              "Provide tax incentives for small businesses",
-              "Reform corporate tax loopholes",
-              "Increase funding for job training programs",
-              "Pass a balanced budget amendment",
-              "Support local businesses affected by construction"
-            ]}
-            bgColorClass="bg-yellow-50"
-            borderColorClass="border border-yellow-200"
-            textColorClass="text-yellow-800"
-            hoverColorClass="hover:bg-yellow-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
+              {/* Local Issues Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">Local Issues</h3>
+                
+                {/* TODO: Implement dynamic local issues based on user's address */}
+                {/* District Issues */}
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <h4 className="font-medium text-blue-800 mb-2">District Issues</h4>
+                  <p className="text-sm text-gray-600">
+                    TODO: Fetch and display issues specific to the user's district
+                  </p>
+                </div>
+                
+                {/* City Issues */}
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                  <h4 className="font-medium text-green-800 mb-2">City Issues</h4>
+                  <p className="text-sm text-gray-600">
+                    TODO: Fetch and display issues specific to the user's city
+                  </p>
+                </div>
+                
+                {/* State Issues */}
+                <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-md">
+                  <h4 className="font-medium text-purple-800 mb-2">State Issues</h4>
+                  <p className="text-sm text-gray-600">
+                    TODO: Fetch and display issues specific to the user's state
+                  </p>
+                </div>
+              </div>
 
-          {/* Environment Category */}
-          <IssueCategory
-            title="Environment & Climate"
-            category="environment"
-            previewIssues={[
-              "Implement stronger clean water protections",
-              "Address climate change with bold legislation",
-              "Oppose fracking in our county"
-            ]}
-            moreIssues={[
-              "Fund renewable energy research and development",
-              "Improve public transport to reduce emissions",
-              "Address flooding issues in our community",
-              "Enforce stricter pollution regulations",
-              "Create more green spaces in urban areas"
-            ]}
-            bgColorClass="bg-green-50"
-            borderColorClass="border border-green-200"
-            textColorClass="text-green-800"
-            hoverColorClass="hover:bg-green-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
-
-          {/* Politics Category */}
-          <IssueCategory
-            title="Politics & Governance"
-            category="politics"
-            previewIssues={[
-              "Support ranked choice voting reform",
-              "End partisan gerrymandering",
-              "Protect voting rights and access"
-            ]}
-            moreIssues={[
-              "Limit corporate money in politics",
-              "Increase transparency in campaign financing",
-              "Support term limits for elected officials",
-              "Hold town halls more frequently",
-              "Reform the electoral college system"
-            ]}
-            bgColorClass="bg-blue-50"
-            borderColorClass="border border-blue-200"
-            textColorClass="text-blue-800"
-            hoverColorClass="hover:bg-blue-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
-
-          {/* Healthcare Category */}
-          <IssueCategory
-            title="Healthcare & Wellbeing"
-            category="healthcare"
-            previewIssues={[
-              "Lower prescription drug prices",
-              "Support Medicare for All legislation",
-              "Improve mental health resources"
-            ]}
-            moreIssues={[
-              "Protect reproductive healthcare access",
-              "Increase funding for addiction treatment",
-              "Address hospital staffing shortages",
-              "Improve healthcare for veterans",
-              "Fund medical research for rare diseases"
-            ]}
-            bgColorClass="bg-red-50"
-            borderColorClass="border border-red-200"
-            textColorClass="text-red-800"
-            hoverColorClass="hover:bg-red-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
-
-          {/* International Affairs Category */}
-          <IssueCategory
-            title="International Affairs"
-            category="international"
-            previewIssues={[
-              "Support peace negotiations in Ukraine",
-              "Address the humanitarian crisis in Gaza",
-              "Reform immigration policies"
-            ]}
-            moreIssues={[
-              "Reconsider foreign aid priorities",
-              "Advocate for human rights in authoritarian countries",
-              "Increase diplomatic engagement globally",
-              "Support international climate agreements",
-              "Bring home Kilmar Garcia who was wrongfully deported"
-            ]}
-            bgColorClass="bg-purple-50"
-            borderColorClass="border border-purple-200"
-            textColorClass="text-purple-800"
-            hoverColorClass="hover:bg-purple-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
-
-          {/* Local Issues */}
-          <IssueCategory
-            title="Local Community Issues"
-            category="other"
-            previewIssues={[
-              "Fix potholes on Main St between Oak and Pine",
-              "Lower property taxes by reducing millage to 15",
-              "Increase funding for McKinley High's science lab"
-            ]}
-            moreIssues={[
-              "Improve streetlights in the downtown area",
-              "Address noise pollution from the local factory",
-              "Increase funding for public libraries",
-              "Build more affordable housing in our community",
-              "Fix the flooding problems on Elm Street"
-            ]}
-            bgColorClass="bg-indigo-50"
-            borderColorClass="border border-indigo-200"
-            textColorClass="text-indigo-800"
-            hoverColorClass="hover:bg-indigo-100"
-            demands={demands}
-            onIssueClick={addIssue}
-          />
-
-              {/* Custom demands section removed */}
+              {/* National Issues Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">National Issues</h3>
+                
+                {/* TODO: Implement current national issues */}
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-gray-600">
+                    TODO: Fetch and display current national issues and trending topics
+                  </p>
+                </div>
+              </div>
             </>
           )}
         </div>
