@@ -53,15 +53,15 @@ export default function DemandCarousel({ title, demands, onSelectDemand, selecte
   if (!demands || demands.length === 0) return null;
 
   return (
-    <div className="mb-8 relative group">
-      <h3 className="text-xl font-semibold mb-4">{title}</h3>
+    <div className="mb-6 relative group">
+      <h3 className="text-lg font-medium text-gray-700 mb-3">{title}</h3>
       
       <div className="relative">
         {/* Left Arrow */}
         {showLeftArrow && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-r opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-100"
             aria-label="Scroll left"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +74,7 @@ export default function DemandCarousel({ title, demands, onSelectDemand, selecte
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-l opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-100"
             aria-label="Scroll right"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,16 +96,20 @@ export default function DemandCarousel({ title, demands, onSelectDemand, selecte
                 key={demand.id}
                 onClick={() => onSelectDemand(demand.text)}
                 className={`
-                  flex-shrink-0 w-72 p-4 rounded-lg border-2 transition-all duration-200
+                  flex-shrink-0 w-80 p-4 rounded-lg border transition-all duration-200 transform hover:scale-105
                   ${isSelected 
-                    ? 'border-primary bg-primary bg-opacity-10 shadow-md' 
-                    : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
+                    ? 'border-primary bg-primary text-white shadow-lg' 
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-lg'
                   }
                 `}
               >
-                <p className="text-left font-medium text-gray-800">{demand.text}</p>
+                <p className={`text-left font-medium ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+                  {demand.text}
+                </p>
                 {demand.source && (
-                  <p className="text-sm text-gray-500 mt-2">Source: {demand.source}</p>
+                  <p className={`text-sm mt-2 ${isSelected ? 'text-white opacity-90' : 'text-gray-500'}`}>
+                    From: {demand.source}
+                  </p>
                 )}
               </button>
             );
