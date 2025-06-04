@@ -132,8 +132,15 @@ async function analyzeForm(url, tabId) {
   }
   
   try {
+    // Determine API URL based on environment
+    const apiUrl = url.includes('localhost') 
+      ? 'http://localhost:3000/api/analyze-form'
+      : 'https://outrage.gg/api/analyze-form';
+    
+    console.log('Calling analyze-form API at:', apiUrl);
+    
     // Call your Next.js API to analyze the form
-    const response = await fetch('http://localhost:3000/api/analyze-form', {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -150,6 +157,7 @@ async function analyzeForm(url, tabId) {
     }
     
     const analysis = await response.json();
+    console.log('Form analysis response:', analysis);
     
     // Update session with form analysis
     sessionData.formAnalysis = analysis;
@@ -158,6 +166,10 @@ async function analyzeForm(url, tabId) {
     return analysis;
   } catch (error) {
     console.error('Form analysis failed:', error);
+    console.error('Error details:', error.message);
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      console.error('Network error - check CORS and API availability');
+    }
     throw error;
   }
 }
