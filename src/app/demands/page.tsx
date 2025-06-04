@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseDraftData } from '@/utils/navigation';
 import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
+import DemandCarousel from '@/components/DemandCarousel';
 
 export default function DemandsPage() {
   const router = useRouter();
@@ -14,7 +15,8 @@ export default function DemandsPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [hasCampaign, setHasCampaign] = useState(false);
-  // No longer need expandedCategories as the component handles this internally
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   
   useEffect(() => {
     // Get the address from localStorage
@@ -38,7 +40,25 @@ export default function DemandsPage() {
     // Check if using a campaign
     const activeCampaignId = localStorage.getItem('activeCampaignId');
     setHasCampaign(!!activeCampaignId);
+    
+    // Fetch demand categories
+    fetchCategories();
   }, [router]);
+  
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await fetch('/api/demands/categories');
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
   
   // Save state whenever any relevant state changes
   useEffect(() => {
@@ -105,9 +125,13 @@ export default function DemandsPage() {
   };
 
 
-  const addIssue = (issue: string) => {
-    if (!demands.includes(issue)) {
-      setDemands([...demands, issue]);
+  const handleSelectDemand = (demandText: string) => {
+    if (demands.includes(demandText)) {
+      // Remove if already selected
+      setDemands(demands.filter(d => d !== demandText));
+    } else {
+      // Add if not selected
+      setDemands([...demands, demandText]);
     }
   };
 
@@ -268,51 +292,29 @@ export default function DemandsPage() {
             </button>
           )}
 
-          {/* Issue Categories - only show when not using campaign */}
+          {/* Demand Categories Carousel - only show when not using campaign */}
           {!hasCampaign && (
-            <>
-              {/* Local Issues Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">Local Issues</h3>
-                
-                {/* TODO: Implement dynamic local issues based on user's address */}
-                {/* District Issues */}
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                  <h4 className="font-medium text-blue-800 mb-2">District Issues</h4>
-                  <p className="text-sm text-gray-600">
-                    TODO: Fetch and display issues specific to the user's district
-                  </p>
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Browse Issues by Category</h3>
+              
+              {categoriesLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-                
-                {/* City Issues */}
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <h4 className="font-medium text-green-800 mb-2">City Issues</h4>
-                  <p className="text-sm text-gray-600">
-                    TODO: Fetch and display issues specific to the user's city
-                  </p>
+              ) : (
+                <div className="space-y-6">
+                  {categories.map(category => (
+                    <DemandCarousel
+                      key={category.id}
+                      title={category.title}
+                      demands={category.demands}
+                      onSelectDemand={handleSelectDemand}
+                      selectedDemands={demands}
+                    />
+                  ))}
                 </div>
-                
-                {/* State Issues */}
-                <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-md">
-                  <h4 className="font-medium text-purple-800 mb-2">State Issues</h4>
-                  <p className="text-sm text-gray-600">
-                    TODO: Fetch and display issues specific to the user's state
-                  </p>
-                </div>
-              </div>
-
-              {/* National Issues Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">National Issues</h3>
-                
-                {/* TODO: Implement current national issues */}
-                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-gray-600">
-                    TODO: Fetch and display current national issues and trending topics
-                  </p>
-                </div>
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
         

@@ -1,0 +1,129 @@
+import { NextResponse } from 'next/server';
+import { Pool } from 'pg';
+
+// Create database pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+});
+
+interface DemandCategory {
+  id: string;
+  title: string;
+  type: 'youtube_channel' | 'local' | 'national' | 'trending' | 'custom';
+  demands: Array<{
+    id: string;
+    text: string;
+    source?: string;
+    metadata?: any;
+  }>;
+}
+
+export async function GET() {
+  try {
+    const categories: DemandCategory[] = [];
+
+    // Fetch YouTube channel demands grouped by channel
+    const youtubeResult = await pool.query(`
+      SELECT 
+        yd.id,
+        yd.demand_text,
+        yd.source_channel_id,
+        yd.source_channel_title,
+        yd.source_video_title,
+        yd.video_published_at
+      FROM youtube_demands yd
+      WHERE yd.created_at > NOW() - INTERVAL '30 days'
+      ORDER BY yd.source_channel_title, yd.video_published_at DESC
+    `);
+
+    // Group by channel
+    const channelMap = new Map<string, DemandCategory>();
+    
+    for (const row of youtubeResult.rows) {
+      const channelId = row.source_channel_id;
+      const channelTitle = row.source_channel_title;
+      
+      if (!channelMap.has(channelId)) {
+        channelMap.set(channelId, {
+          id: `youtube_${channelId}`,
+          title: channelTitle,
+          type: 'youtube_channel',
+          demands: []
+        });
+      }
+      
+      const category = channelMap.get(channelId)!;
+      category.demands.push({
+        id: row.id.toString(),
+        text: row.demand_text,
+        source: row.source_video_title,
+        metadata: {
+          videoPublishedAt: row.video_published_at
+        }
+      });
+    }
+
+    // Add YouTube categories to the main categories array
+    categories.push(...Array.from(channelMap.values()));
+
+    // TODO: Add other category types here in the future
+    // For now, adding some placeholder categories to demonstrate extensibility
+    
+    // Example: Trending National Issues (placeholder for now)
+    categories.push({
+      id: 'trending_national',
+      title: 'Trending National Issues',
+      type: 'trending',
+      demands: [
+        {
+          id: 'placeholder_1',
+          text: 'Increase funding for public education by 20%',
+          source: 'National Education Survey 2025'
+        },
+        {
+          id: 'placeholder_2',
+          text: 'Implement universal healthcare coverage',
+          source: 'Healthcare Reform Coalition'
+        },
+        {
+          id: 'placeholder_3',
+          text: 'Pass comprehensive climate action legislation',
+          source: 'Climate Action Network'
+        }
+      ]
+    });
+
+    // Example: Local Issues (would be customized based on user location)
+    categories.push({
+      id: 'local_issues',
+      title: 'Local Issues in Your Area',
+      type: 'local',
+      demands: [
+        {
+          id: 'local_1',
+          text: 'Fix potholes on Main Street',
+          source: 'Community Board Meeting'
+        },
+        {
+          id: 'local_2',
+          text: 'Increase police patrols in downtown area',
+          source: 'Neighborhood Watch'
+        },
+        {
+          id: 'local_3',
+          text: 'Fund new public library branch',
+          source: 'Library Association'
+        }
+      ]
+    });
+
+    return NextResponse.json({ categories });
+
+  } catch (error) {
+    console.error('Error fetching demand categories:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch demand categories' },
+      { status: 500 }
+    );
+  }
+}
