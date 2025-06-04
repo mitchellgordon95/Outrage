@@ -137,6 +137,31 @@ export default function DemandsPage() {
       </header>
       
       <div className="max-w-4xl w-full bg-white p-6 md:p-8 rounded-lg shadow-md">
+        {/* Navigation progress */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</div>
+              <div className="text-sm font-bold">Demands</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">2</div>
+              <div className="text-sm text-gray-600">Representatives</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
+              <div className="text-sm text-gray-600">Personal Info</div>
+            </div>
+            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">4</div>
+              <div className="text-sm text-gray-600">Preview</div>
+            </div>
+          </div>
+        </div>
+
         {/* Active Campaign Banner */}
         <ActiveCampaignBanner />
         
@@ -397,31 +422,6 @@ export default function DemandsPage() {
           )}
         </div>
         
-        {/* Navigation progress */}
-        <div className="mb-8 mt-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</div>
-              <div className="text-sm font-bold">Demands</div>
-            </div>
-            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
-            <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">2</div>
-              <div className="text-sm text-gray-600">Representatives</div>
-            </div>
-            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
-            <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
-              <div className="text-sm text-gray-600">Personal Info</div>
-            </div>
-            <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
-            <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">4</div>
-              <div className="text-sm text-gray-600">Preview</div>
-            </div>
-          </div>
-        </div>
-
         {/* Action Buttons */}
         <div className="mt-8 mb-4 flex gap-4">
           {/* Clear Form Button - only show when not using campaign */}
