@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { parseDraftData } from '@/utils/navigation';
 import ActiveCampaignBanner from '@/components/ActiveCampaignBanner';
 import DemandCarousel from '@/components/DemandCarousel';
+import VideoCarousel from '@/components/VideoCarousel';
 
 export default function DemandsPage() {
   const router = useRouter();
@@ -312,15 +313,31 @@ export default function DemandsPage() {
               </div>
             ) : categories.length > 0 ? (
               <div className="space-y-8">
-                {categories.map(category => (
-                  <DemandCarousel
-                    key={category.id}
-                    title={category.title}
-                    demands={category.demands}
-                    onSelectDemand={handleSelectDemand}
-                    selectedDemands={demands}
-                  />
-                ))}
+                {categories.map(category => {
+                  // Use VideoCarousel for YouTube channels, DemandCarousel for others
+                  if (category.type === 'youtube_channel' && category.videos) {
+                    return (
+                      <VideoCarousel
+                        key={category.id}
+                        title={category.title}
+                        videos={category.videos}
+                        onSelectDemand={handleSelectDemand}
+                        selectedDemands={demands}
+                      />
+                    );
+                  } else if (category.demands) {
+                    return (
+                      <DemandCarousel
+                        key={category.id}
+                        title={category.title}
+                        demands={category.demands}
+                        onSelectDemand={handleSelectDemand}
+                        selectedDemands={demands}
+                      />
+                    );
+                  }
+                  return null;
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
