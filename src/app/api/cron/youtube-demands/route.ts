@@ -260,7 +260,7 @@ export async function GET(request: Request) {
       channelsProcessed: 0,
       videosAnalyzed: 0,
       demandsGenerated: 0,
-      errors: []
+      errors: [] as string[]
     };
 
     // Process each channel
