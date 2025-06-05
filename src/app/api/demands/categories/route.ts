@@ -90,11 +90,32 @@ export async function GET() {
       });
     }
 
-    // Add YouTube categories to the main categories array
-    categories.push(...Array.from(channelMap.values()));
-
     // TODO: Add other category types here in the future
     // For now, adding some placeholder categories to demonstrate extensibility
+    
+    // Example: Local Issues (would be customized based on user location)
+    categories.push({
+      id: 'local_issues',
+      title: 'Local Issues in Your Area',
+      type: 'local',
+      demands: [
+        {
+          id: 'local_1',
+          text: 'Fix potholes on Main Street',
+          source: 'Community Board Meeting'
+        },
+        {
+          id: 'local_2',
+          text: 'Increase police patrols in downtown area',
+          source: 'Neighborhood Watch'
+        },
+        {
+          id: 'local_3',
+          text: 'Fund new public library branch',
+          source: 'Library Association'
+        }
+      ]
+    });
     
     // Example: Trending National Issues (placeholder for now)
     categories.push({
@@ -120,29 +141,8 @@ export async function GET() {
       ]
     });
 
-    // Example: Local Issues (would be customized based on user location)
-    categories.push({
-      id: 'local_issues',
-      title: 'Local Issues in Your Area',
-      type: 'local',
-      demands: [
-        {
-          id: 'local_1',
-          text: 'Fix potholes on Main Street',
-          source: 'Community Board Meeting'
-        },
-        {
-          id: 'local_2',
-          text: 'Increase police patrols in downtown area',
-          source: 'Neighborhood Watch'
-        },
-        {
-          id: 'local_3',
-          text: 'Fund new public library branch',
-          source: 'Library Association'
-        }
-      ]
-    });
+    // Add YouTube categories to the main categories array
+    categories.push(...Array.from(channelMap.values()));
 
     return NextResponse.json({ categories });
 
