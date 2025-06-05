@@ -40,6 +40,14 @@ function createCacheKey(url: string, userData: any): string {
 export async function POST(request: NextRequest) {
   // Get the origin of the request
   const origin = request.headers.get('origin') || '';
+  const method = request.method;
+  const url = request.url;
+  
+  console.log('=== ANALYZE-FORM REQUEST ===');
+  console.log('Method:', method);
+  console.log('URL:', url);
+  console.log('Origin:', origin || 'NO ORIGIN');
+  console.log('Headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
   
   // Chrome extensions often don't send origin header from background scripts
   // So we need to be permissive for now
@@ -49,8 +57,11 @@ export async function POST(request: NextRequest) {
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 
+  console.log('CORS headers being set:', headers);
+
   // Handle preflight requests
   if (request.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request');
     return new Response(null, { status: 200, headers });
   }
 
@@ -117,13 +128,25 @@ export async function POST(request: NextRequest) {
 
 // Export OPTIONS handler for CORS preflight
 export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  const url = request.url;
+  
+  console.log('=== ANALYZE-FORM OPTIONS REQUEST ===');
+  console.log('URL:', url);
+  console.log('Origin:', origin || 'NO ORIGIN');
+  console.log('Headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+  
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+  
+  console.log('OPTIONS response headers:', headers);
+  
   return new Response(null, {
     status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+    headers,
   });
 }
 

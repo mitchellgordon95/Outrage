@@ -143,6 +143,16 @@ async function analyzeForm(url, tabId) {
     
     console.log('Extension mode:', isDevelopment ? 'development' : 'production');
     console.log('Calling analyze-form API at:', apiUrl);
+    console.log('Request details:', {
+      url: apiUrl,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      bodyData: {
+        url,
+        userData: sessionData.userData,
+        representative: sessionData.representative
+      }
+    });
     
     // Call your Next.js API to analyze the form
     const response = await fetch(apiUrl, {
@@ -156,6 +166,9 @@ async function analyzeForm(url, tabId) {
         representative: sessionData.representative
       })
     });
+    
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       throw new Error(`API request failed: ${response.statusText}`);
@@ -172,9 +185,25 @@ async function analyzeForm(url, tabId) {
   } catch (error) {
     console.error('Form analysis failed:', error);
     console.error('Error details:', error.message);
+    console.error('Error type:', error.constructor.name);
+    console.error('Full error object:', error);
+    
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.error('Network error - check CORS and API availability');
+      console.error('Network error - likely CORS issue or network failure');
+      console.error('This usually means:');
+      console.error('1. CORS preflight failed (check server logs)');
+      console.error('2. Network connection issue');
+      console.error('3. Server returned redirect on preflight');
+      console.error('4. SSL certificate issue');
     }
+    
+    // Log the exact URL that was attempted
+    console.error('Failed URL:', apiUrl);
+    console.error('Session data:', {
+      hasUserData: !!sessionData.userData,
+      representative: sessionData.representative?.name
+    });
+    
     throw error;
   }
 }
