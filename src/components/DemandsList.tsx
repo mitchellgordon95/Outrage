@@ -26,7 +26,7 @@ export default function DemandsList({
   if (demands.length === 0) {
     return (
       <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-md">
-        <p className="text-gray-500">No demands added yet. Select issues from categories below or add your own.</p>
+        <p className="text-gray-500">No demands added yet. Select issues from existing categories in the Browse tab or add your own.</p>
       </div>
     );
   }
