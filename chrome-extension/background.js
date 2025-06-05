@@ -132,11 +132,16 @@ async function analyzeForm(url, tabId) {
   }
   
   try {
-    // Determine API URL based on environment
-    const apiUrl = url.includes('localhost') 
+    // Determine API URL based on extension installation
+    // Check if extension is unpacked (development mode)
+    const manifest = chrome.runtime.getManifest();
+    const isDevelopment = !('update_url' in manifest);
+    
+    const apiUrl = isDevelopment
       ? 'http://localhost:3000/api/analyze-form'
       : 'https://outrage.gg/api/analyze-form';
     
+    console.log('Extension mode:', isDevelopment ? 'development' : 'production');
     console.log('Calling analyze-form API at:', apiUrl);
     
     // Call your Next.js API to analyze the form
