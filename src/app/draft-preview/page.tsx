@@ -320,7 +320,7 @@ export default function DraftPreviewPage() {
               onClick={() => router.push('/personal-info')}
               className="text-primary hover:underline flex items-center"
             >
-              <span className="mr-1">←</span> Back to Personal Info
+              <span className="mr-1">←</span> Back to Personalize
             </button>
           </div>
 
@@ -337,7 +337,7 @@ export default function DraftPreviewPage() {
             <div className="h-1 bg-primary flex-1 mx-2"></div>
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">3</div>
-              <div className="text-sm">Personal Info</div>
+              <div className="text-sm">Personalize</div>
             </div>
             <div className="h-1 bg-primary flex-1 mx-2"></div>
             <div className="flex items-center">
@@ -561,7 +561,7 @@ export default function DraftPreviewPage() {
             onClick={() => router.push('/personal-info')}
             className="py-3 px-6 border border-gray-300 rounded-md hover:bg-gray-100"
           >
-            Back to Personal Info
+            Back to Personalize
           </button>
           <div className="flex space-x-4">
             <button

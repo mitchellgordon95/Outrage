@@ -248,7 +248,7 @@ export default function PersonalInfoPage() {
             <div className="h-1 bg-primary flex-1 mx-2"></div>
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">3</div>
-              <div className="text-sm font-bold">Personal Info</div>
+              <div className="text-sm font-bold">Personalize</div>
             </div>
             <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
             <div className="flex items-center">
@@ -280,7 +280,7 @@ export default function PersonalInfoPage() {
         {/* Summary of demands and representatives */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h2 className="font-semibold mb-2">What Do You Care About?</h2>
+            <h2 className="font-semibold mb-2">Demands</h2>
             <ul className="list-disc pl-5 space-y-1">
               {demands.map((demand, index) => (
                 <li key={index} className="text-gray-800 text-sm">{demand}</li>
@@ -307,7 +307,7 @@ export default function PersonalInfoPage() {
         </div>
         
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Personal Information (Optional)</h2>
+          <h2 className="text-xl font-semibold mb-4">Personalize Your Message (Optional)</h2>
           <p className="text-gray-600 mb-4">
             Adding personal information helps make your message more effective.
             Click items to select them.

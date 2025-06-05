@@ -155,7 +155,7 @@ export default function DemandsPage() {
             <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
-              <div className="text-sm text-gray-600">Personal Info</div>
+              <div className="text-sm text-gray-600">Personalize</div>
             </div>
             <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
             <div className="flex items-center">

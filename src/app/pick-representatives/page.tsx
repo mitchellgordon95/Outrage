@@ -684,7 +684,7 @@ export default function IssueDetailsPage() {
             <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mr-2">3</div>
-              <div className="text-sm text-gray-600">Personal Info</div>
+              <div className="text-sm text-gray-600">Personalize</div>
             </div>
             <div className="h-1 bg-gray-300 flex-1 mx-2"></div>
             <div className="flex items-center">
@@ -747,9 +747,9 @@ export default function IssueDetailsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          {/* What Do You Care About section */}
+          {/* Demands section */}
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md mb-4">
-            <h2 className="text-xl font-semibold mb-3">What Do You Care About?</h2>
+            <h2 className="text-xl font-semibold mb-3">Demands</h2>
             <ul className="list-disc pl-5 space-y-1">
               {demands.map((demand, index) => (
                 <li key={index} className="text-gray-800">{demand}</li>
