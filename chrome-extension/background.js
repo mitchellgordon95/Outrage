@@ -139,7 +139,7 @@ async function analyzeForm(url, tabId) {
     
     const apiUrl = isDevelopment
       ? 'http://localhost:3000/api/analyze-form'
-      : 'https://outrage.gg/api/analyze-form';
+      : 'https://www.outrage.gg/api/analyze-form';
     
     console.log('Extension mode:', isDevelopment ? 'development' : 'production');
     console.log('Calling analyze-form API at:', apiUrl);
