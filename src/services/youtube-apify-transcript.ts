@@ -108,7 +108,7 @@ export async function getYouTubeTranscriptApify(videoIdOrUrl: string): Promise<T
       };
     }
     
-    const video = items[0] as ApifyVideoResult;
+    const video = items[0] as unknown as ApifyVideoResult;
     
     // Check if subtitles are available
     if (!video.subtitles || video.subtitles.length === 0) {
@@ -212,7 +212,7 @@ export async function getChannelVideosWithTranscripts(
     
     console.log(`Fetched ${items.length} videos from channel`);
     
-    return items as ApifyVideoResult[];
+    return items as unknown as ApifyVideoResult[];
     
   } catch (error: any) {
     console.error('Failed to fetch channel videos:', error);
