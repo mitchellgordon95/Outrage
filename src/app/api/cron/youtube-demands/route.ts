@@ -1,24 +1,19 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { Pool } from 'pg';
-import { YoutubeTranscript } from 'youtube-transcript';
+import { getChannelVideosWithTranscripts } from '@/services/youtube-apify-transcript';
 
 // Create database pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
 });
 
-// YouTube Data API v3 configuration
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
-
-// List of YouTube channel IDs to monitor
-// You can find a channel ID by going to the channel page and looking at the URL
-// e.g., https://www.youtube.com/channel/UC_CHANNEL_ID_HERE
+// List of YouTube channel URLs to monitor
+// Format: https://www.youtube.com/channel/UC_CHANNEL_ID_HERE
 const YOUTUBE_CHANNELS = process.env.YOUTUBE_CHANNELS?.split(',') || [];
 
 // Number of recent videos to fetch per channel
-const VIDEOS_PER_CHANNEL = 5;
+const VIDEOS_PER_CHANNEL = 10;
 
 // Interface for YouTube API responses
 interface YouTubeVideo {
@@ -52,124 +47,7 @@ function isAuthorizedCronRequest(request: Request): boolean {
   return true;
 }
 
-// Fetch recent videos from a YouTube channel (excluding Shorts)
-async function fetchChannelVideos(channelId: string): Promise<YouTubeVideo[]> {
-  try {
-    // Convert channel ID to uploads playlist ID (excluding Shorts)
-    // UC... -> UULF... to get only long-form videos
-    let playlistId: string;
-    if (channelId.startsWith('UC')) {
-      playlistId = 'UULF' + channelId.substring(2);
-      console.log(`Fetching long-form videos from playlist: ${playlistId} (channel: ${channelId})`);
-    } else {
-      // Fallback to regular uploads playlist if not a UC channel
-      playlistId = 'UU' + channelId.substring(2);
-      console.log(`Channel ID doesn't start with UC, using regular uploads: ${playlistId}`);
-    }
-    
-    // Fetch videos from the playlist
-    const playlistParams = new URLSearchParams({
-      key: YOUTUBE_API_KEY!,
-      playlistId: playlistId,
-      part: 'snippet',
-      maxResults: VIDEOS_PER_CHANNEL.toString()
-    });
 
-    const playlistResponse = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${playlistParams}`);
-    
-    if (!playlistResponse.ok) {
-      // If UULF playlist doesn't exist, fall back to regular uploads
-      if (playlistResponse.status === 404 && playlistId.startsWith('UULF')) {
-        console.log('UULF playlist not found, falling back to regular uploads playlist');
-        playlistId = 'UU' + channelId.substring(2);
-        
-        const fallbackParams = new URLSearchParams({
-          key: YOUTUBE_API_KEY!,
-          playlistId: playlistId,
-          part: 'snippet',
-          maxResults: VIDEOS_PER_CHANNEL.toString()
-        });
-        
-        const fallbackResponse = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${fallbackParams}`);
-        
-        if (!fallbackResponse.ok) {
-          console.error(`YouTube API error for playlist ${playlistId}:`, fallbackResponse.status);
-          return [];
-        }
-        
-        const fallbackData = await fallbackResponse.json();
-        
-        // Log all videos from fallback playlist
-        if (fallbackData.items && fallbackData.items.length > 0) {
-          console.log(`Found ${fallbackData.items.length} videos from fallback playlist ${playlistId}:`);
-          fallbackData.items.forEach((item: any, index: number) => {
-            console.log(`  ${index + 1}. "${item.snippet.title}" - Video ID: ${item.snippet.resourceId.videoId}`);
-          });
-        }
-        
-        return fallbackData.items.map((item: any) => ({
-          id: item.snippet.resourceId.videoId,
-          snippet: item.snippet
-        }));
-      }
-      
-      console.error(`YouTube API error for playlist ${playlistId}:`, playlistResponse.status);
-      return [];
-    }
-
-    const playlistData = await playlistResponse.json();
-    
-    // Log all videos for debugging
-    if (playlistData.items && playlistData.items.length > 0) {
-      console.log(`Found ${playlistData.items.length} videos from playlist ${playlistId}:`);
-      playlistData.items.forEach((item: any, index: number) => {
-        console.log(`  ${index + 1}. "${item.snippet.title}" - Video ID: ${item.snippet.resourceId.videoId}`);
-      });
-    } else {
-      console.log(`No videos found in playlist ${playlistId}`);
-    }
-    
-    return playlistData.items.map((item: any) => ({
-      id: item.snippet.resourceId.videoId,
-      snippet: item.snippet
-    }));
-  } catch (error) {
-    console.error(`Error fetching videos for channel ${channelId}:`, error);
-    return [];
-  }
-}
-
-// Fetch video captions/transcript
-// Fetch video transcript using youtube-transcript package
-async function fetchVideoTranscript(videoId: string): Promise<string | null> {
-  try {
-    // Try to fetch transcript using the youtube-transcript package
-    const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
-    
-    if (!transcriptData || transcriptData.length === 0) {
-      console.log(`No transcript available for video ${videoId}`);
-      return null;
-    }
-    
-    // Combine all transcript segments into a single string
-    const fullTranscript = transcriptData
-      .map(segment => segment.text)
-      .join(' ')
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
-    
-    console.log(`Successfully fetched transcript for video ${videoId} (${fullTranscript.length} chars)`);
-    return fullTranscript;
-    
-  } catch (error: any) {
-    // Common errors:
-    // - "Transcript is disabled" - no captions available
-    // - "Video unavailable" - private or deleted video
-    // - Network errors
-    console.log(`Could not fetch transcript for video ${videoId}:`, error.message);
-    return null;
-  }
-}
 
 // Analyze video content and generate political demands
 async function analyzeVideoContent(video: YouTubeVideo, transcript: string | null): Promise<string[]> {
@@ -244,9 +122,9 @@ export async function GET(request: Request) {
     }
 
     // Check required environment variables
-    if (!YOUTUBE_API_KEY) {
-      console.error('YOUTUBE_API_KEY not configured');
-      return NextResponse.json({ error: 'YouTube API key not configured' }, { status: 500 });
+    if (!process.env.APIFY_TOKEN) {
+      console.error('APIFY_TOKEN not configured');
+      return NextResponse.json({ error: 'Apify token not configured' }, { status: 500 });
     }
 
     if (YOUTUBE_CHANNELS.length === 0) {
@@ -264,12 +142,12 @@ export async function GET(request: Request) {
     };
 
     // Process each channel
-    for (const channelId of YOUTUBE_CHANNELS) {
+    for (const channelUrl of YOUTUBE_CHANNELS) {
       try {
-        console.log(`Processing channel: ${channelId}`);
+        console.log(`Processing channel: ${channelUrl}`);
         
-        // Fetch recent videos
-        const videos = await fetchChannelVideos(channelId);
+        // Fetch recent videos with transcripts using Apify
+        const videos = await getChannelVideosWithTranscripts(channelUrl, VIDEOS_PER_CHANNEL);
         console.log(`Found ${videos.length} recent videos`);
 
         // Process each video
@@ -286,16 +164,40 @@ export async function GET(request: Request) {
               continue;
             }
 
-            // Fetch transcript
-            const transcript = await fetchVideoTranscript(video.id);
+            // Get transcript from Apify results
+            let transcript: string | null = null;
+            if (video.subtitles && video.subtitles.length > 0) {
+              const subtitle = video.subtitles.find(s => s.language === 'en') || video.subtitles[0];
+              if (subtitle.srt) {
+                // Convert SRT to plain text
+                transcript = subtitle.srt
+                  .split('\n')
+                  .filter(line => !line.match(/^\d+$/) && !line.includes('-->') && line.trim())
+                  .join(' ')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+              }
+            }
+            
+            // Create YouTubeVideo object for compatibility
+            const videoData: YouTubeVideo = {
+              id: video.id,
+              snippet: {
+                title: video.title,
+                description: video.text || '',
+                channelId: video.channelId,
+                channelTitle: video.channelName,
+                publishedAt: video.date
+              }
+            };
             
             // Analyze content and generate demands
-            const demands = await analyzeVideoContent(video, transcript);
+            const demands = await analyzeVideoContent(videoData, transcript);
             console.log(`Generated ${demands.length} demands for video ${video.id}`);
 
             if (demands.length > 0) {
               // Save to database
-              await saveDemandsToDB(demands, video);
+              await saveDemandsToDB(demands, videoData);
               results.demandsGenerated += demands.length;
             }
 
@@ -311,8 +213,8 @@ export async function GET(request: Request) {
 
         results.channelsProcessed++;
       } catch (error) {
-        console.error(`Error processing channel ${channelId}:`, error);
-        results.errors.push(`Channel ${channelId}: ${error}`);
+        console.error(`Error processing channel ${channelUrl}:`, error);
+        results.errors.push(`Channel ${channelUrl}: ${error}`);
       }
     }
 
