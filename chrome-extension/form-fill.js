@@ -258,6 +258,8 @@ function getStatusIcon(status) {
       return '<span class="spinner"></span>';
     case 'opened':
       return '📋';
+    case 'analyzing':
+      return '<span class="spinner"></span>';
     case 'filling':
       return '✍️';
     case 'completed':
@@ -272,11 +274,13 @@ function getStatusIcon(status) {
 function getStatusText(status) {
   switch (status) {
     case 'pending':
-      return 'Waiting';
+      return 'Ready to start';
     case 'opening':
       return 'Opening...';
     case 'opened':
       return 'Form Opened';
+    case 'analyzing':
+      return 'Analyzing form...';
     case 'filling':
       return 'Filling Form';
     case 'completed':

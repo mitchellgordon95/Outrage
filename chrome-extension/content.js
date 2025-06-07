@@ -1,6 +1,85 @@
 // Content script injected into representative websites
 console.log('Outrage Form Filler content script loaded');
 
+// UI helper functions (defined first so they're available immediately)
+function showStatus(message, type = 'info') {
+  removeExistingStatus();
+  
+  const status = document.createElement('div');
+  status.id = 'outrage-status';
+  status.textContent = message;
+  status.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  document.body.appendChild(status);
+  
+  if (type === 'success') {
+    setTimeout(() => status.remove(), 5000);
+  }
+}
+
+function showError(message) {
+  removeExistingStatus();
+  
+  const error = document.createElement('div');
+  error.id = 'outrage-status';
+  error.textContent = message;
+  error.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background: #ef4444;
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  document.body.appendChild(error);
+}
+
+function removeExistingStatus() {
+  const existing = document.getElementById('outrage-status');
+  if (existing) {
+    existing.remove();
+  }
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+document.head.appendChild(style);
+
+// Show initial status indicator
+showStatus('Loading form...');
+
 // Function to wait for a form to appear
 async function waitForForm(timeout = 10000) {
   const startTime = Date.now();
@@ -79,15 +158,20 @@ function extractFormHTML() {
 window.addEventListener('load', async () => {
   console.log('Page loaded, waiting for forms...');
   
+  // Update status to show we're waiting for forms
+  showStatus('Waiting for form to load...');
+  
   // Wait for forms to appear (they might be loaded dynamically)
   const forms = await waitForForm();
   
   if (forms.length === 0) {
     console.log('No forms found on this page after waiting');
+    showError('No forms found on this page');
     return;
   }
   
   console.log(`Found ${forms.length} forms after page load`);
+  showStatus('Form found, preparing...');
   
   // Get session data from background script
   chrome.runtime.sendMessage({ action: 'getFormData' }, async (sessionData) => {
@@ -106,6 +190,15 @@ window.addEventListener('load', async () => {
       return;
     }
     
+    // Show analyzing status
+    showStatus('Analyzing form...');
+    
+    // Update form status to analyzing
+    chrome.runtime.sendMessage({
+      action: 'updateFormStatus',
+      data: { status: 'analyzing' }
+    });
+    
     // Request form analysis from the API
     chrome.runtime.sendMessage(
       { 
@@ -120,6 +213,12 @@ window.addEventListener('load', async () => {
         } else {
           console.error('Form analysis failed:', response.error);
           showError('Failed to analyze form: ' + response.error);
+          
+          // Update status to failed
+          chrome.runtime.sendMessage({
+            action: 'updateFormStatus',
+            data: { status: 'failed' }
+          });
         }
       }
     );
@@ -341,78 +440,4 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// UI helper functions
-function showStatus(message, type = 'info') {
-  removeExistingStatus();
-  
-  const status = document.createElement('div');
-  status.id = 'outrage-status';
-  status.textContent = message;
-  status.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    background: ${type === 'success' ? '#10b981' : '#3b82f6'};
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 10000;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    animation: slideIn 0.3s ease-out;
-  `;
-  
-  document.body.appendChild(status);
-  
-  if (type === 'success') {
-    setTimeout(() => status.remove(), 5000);
-  }
-}
-
-function showError(message) {
-  removeExistingStatus();
-  
-  const error = document.createElement('div');
-  error.id = 'outrage-status';
-  error.textContent = message;
-  error.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    background: #ef4444;
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 10000;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    animation: slideIn 0.3s ease-out;
-  `;
-  
-  document.body.appendChild(error);
-}
-
-function removeExistingStatus() {
-  const existing = document.getElementById('outrage-status');
-  if (existing) {
-    existing.remove();
-  }
-}
-
-// Add animation styles
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-`;
-document.head.appendChild(style);
+// These UI helper functions have been moved to the top of the file
