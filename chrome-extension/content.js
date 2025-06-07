@@ -24,6 +24,57 @@ async function waitForForm(timeout = 10000) {
   return [];
 }
 
+// Function to extract form HTML with context
+function extractFormHTML() {
+  // Try to find forms on the page
+  const forms = document.querySelectorAll('form');
+  
+  if (forms.length === 0) {
+    // Look for common form containers even if not in a <form> tag
+    const formContainers = document.querySelectorAll(
+      '[id*="contact"], [class*="contact"], [id*="form"], [class*="form"], ' +
+      '[id*="email"], [class*="email"], [id*="message"], [class*="message"]'
+    );
+    
+    if (formContainers.length > 0) {
+      console.log('Found potential form container without <form> tag');
+      // Return the most likely container (usually the largest one)
+      let largestContainer = formContainers[0];
+      let largestSize = formContainers[0].innerHTML.length;
+      
+      formContainers.forEach(container => {
+        if (container.innerHTML.length > largestSize) {
+          largestSize = container.innerHTML.length;
+          largestContainer = container;
+        }
+      });
+      
+      return largestContainer.outerHTML;
+    }
+    
+    return null;
+  }
+  
+  // If multiple forms, try to find the most relevant one
+  let targetForm = forms[0];
+  if (forms.length > 1) {
+    // Look for contact/message forms specifically
+    for (const form of forms) {
+      const formText = form.textContent.toLowerCase();
+      const formHTML = form.outerHTML.toLowerCase();
+      if (formText.includes('contact') || formText.includes('message') || 
+          formText.includes('email') || formHTML.includes('contact') ||
+          formHTML.includes('message')) {
+        targetForm = form;
+        break;
+      }
+    }
+  }
+  
+  console.log('Extracted form HTML, length:', targetForm.outerHTML.length);
+  return targetForm.outerHTML;
+}
+
 // Wait for the page to fully load
 window.addEventListener('load', async () => {
   console.log('Page loaded, waiting for forms...');
@@ -47,11 +98,21 @@ window.addEventListener('load', async () => {
     
     console.log('Session data received:', sessionData);
     
+    // Extract form HTML for analysis
+    const formHTML = extractFormHTML();
+    if (!formHTML) {
+      console.error('Could not extract form HTML');
+      showError('Could not find a form to analyze on this page');
+      return;
+    }
+    
     // Request form analysis from the API
     chrome.runtime.sendMessage(
       { 
         action: 'analyzeForm', 
-        url: window.location.href 
+        url: window.location.href,
+        formHTML: formHTML,
+        pageTitle: document.title
       },
       async (response) => {
         if (response.success) {

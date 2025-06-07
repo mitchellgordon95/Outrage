@@ -69,13 +69,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Analyze form request received:', {
       url: body.url,
+      hasFormHTML: !!body.formHTML,
+      formHTMLLength: body.formHTML?.length || 0,
+      pageTitle: body.pageTitle,
       hasUserData: !!body.userData,
       representative: body.representative?.name,
       origin: origin || 'no-origin',
       userAgent: request.headers.get('user-agent')
     });
     
-    const { url, userData, representative } = body;
+    const { url, formHTML, pageTitle, userData, representative } = body;
 
     if (!url || !userData) {
       console.error('Missing required fields:', { url: !!url, userData: !!userData });
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
       console.log(`Cache key generated: ${cacheKey.substring(0, 8)}...`);
       
       // Try to get cached analysis
-      const formAnalysis = await getCachedFormAnalysis(cacheKey, url, userData, representative);
+      const formAnalysis = await getCachedFormAnalysis(cacheKey, url, formHTML, pageTitle, userData, representative);
       
       console.log('Form analysis result:', JSON.stringify(formAnalysis, null, 2));
       
@@ -241,11 +244,21 @@ function extractFormsFromHtml(html: string): string {
 // Core form analysis function (non-cached)
 async function analyzeFormCore(
   url: string,
+  formHTML: string | undefined,
   userData: any,
   representative: any
 ): Promise<FormAnalysis> {
-  // Fetch the form HTML
-  const html = await fetchFormHtml(url);
+  let html: string;
+  
+  if (formHTML) {
+    // Use provided HTML from content script
+    console.log('Using provided form HTML from content script');
+    html = formHTML;
+  } else {
+    // Fallback to fetching HTML from server
+    console.log('No form HTML provided, falling back to server-side fetch');
+    html = await fetchFormHtml(url);
+  }
   
   return analyzeFormWithAI(html, userData, representative, url);
 }
@@ -253,10 +266,10 @@ async function analyzeFormCore(
 // Cached version of form analysis
 // Cache for 7 days since form structures rarely change
 const getCachedFormAnalysis = unstable_cache(
-  async (cacheKey: string, url: string, userData: any, representative: any): Promise<FormAnalysisWithCache> => {
+  async (cacheKey: string, url: string, formHTML: string | undefined, pageTitle: string | undefined, userData: any, representative: any): Promise<FormAnalysisWithCache> => {
     console.log(`[CACHE MISS] Analyzing form for cache key: ${cacheKey.substring(0, 8)}...`);
     
-    const analysis = await analyzeFormCore(url, userData, representative);
+    const analysis = await analyzeFormCore(url, formHTML, userData, representative);
     
     // Add cache hit flag for internal use
     return { ...analysis, _cacheHit: false };

@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     }
   } else if (request.action === 'analyzeForm') {
-    analyzeForm(request.url, sender.tab?.id)
+    analyzeForm(request.url, sender.tab?.id, request.formHTML, request.pageTitle)
       .then(analysis => sendResponse({ success: true, data: analysis }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Will respond asynchronously
@@ -125,7 +125,7 @@ async function handleFormFillingRequest(data) {
   return results;
 }
 
-async function analyzeForm(url, tabId) {
+async function analyzeForm(url, tabId, formHTML, pageTitle) {
   const sessionData = formSessions.get(tabId);
   if (!sessionData) {
     throw new Error('No session data found for this tab');
@@ -143,12 +143,15 @@ async function analyzeForm(url, tabId) {
     
     console.log('Extension mode:', isDevelopment ? 'development' : 'production');
     console.log('Calling analyze-form API at:', apiUrl);
+    console.log('Form HTML length:', formHTML ? formHTML.length : 0);
     console.log('Request details:', {
       url: apiUrl,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       bodyData: {
         url,
+        formHTML: formHTML ? 'provided' : 'missing',
+        pageTitle,
         userData: sessionData.userData,
         representative: sessionData.representative
       }
@@ -162,6 +165,8 @@ async function analyzeForm(url, tabId) {
       },
       body: JSON.stringify({
         url,
+        formHTML,
+        pageTitle,
         userData: sessionData.userData,
         representative: sessionData.representative
       })
