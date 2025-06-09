@@ -34,6 +34,11 @@ export async function GET() {
   try {
     const categories: DemandCategory[] = [];
 
+    // Debug: Log connection string (without sensitive parts)
+    console.log('Database connection exists:', !!process.env.DATABASE_URL || !!process.env.POSTGRES_URL);
+    console.log('Using DATABASE_URL:', !!process.env.DATABASE_URL);
+    console.log('Using POSTGRES_URL:', !!process.env.POSTGRES_URL);
+
     // Fetch YouTube channel demands grouped by video
     const youtubeResult = await pool.query(`
       SELECT 
@@ -48,6 +53,13 @@ export async function GET() {
       WHERE yd.created_at > NOW() - INTERVAL '30 days'
       ORDER BY yd.source_channel_title, yd.video_published_at DESC
     `);
+    
+    // Debug: Log query results
+    console.log('YouTube demands query returned rows:', youtubeResult.rows.length);
+    if (youtubeResult.rows.length > 0) {
+      console.log('Sample row created_at:', youtubeResult.rows[0].created_at);
+      console.log('Current server time:', new Date());
+    }
 
     // Group by channel, then by video
     const channelMap = new Map<string, DemandCategory>();
