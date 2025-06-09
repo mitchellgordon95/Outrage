@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 // Create database pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
@@ -34,10 +39,6 @@ export async function GET() {
   try {
     const categories: DemandCategory[] = [];
 
-    // Debug: Log connection string (without sensitive parts)
-    console.log('Database connection exists:', !!process.env.DATABASE_URL || !!process.env.POSTGRES_URL);
-    console.log('Using DATABASE_URL:', !!process.env.DATABASE_URL);
-    console.log('Using POSTGRES_URL:', !!process.env.POSTGRES_URL);
 
     // Fetch YouTube channel demands grouped by video
     const youtubeResult = await pool.query(`
@@ -54,12 +55,6 @@ export async function GET() {
       ORDER BY yd.source_channel_title, yd.video_published_at DESC
     `);
     
-    // Debug: Log query results
-    console.log('YouTube demands query returned rows:', youtubeResult.rows.length);
-    if (youtubeResult.rows.length > 0) {
-      console.log('Sample row created_at:', youtubeResult.rows[0].created_at);
-      console.log('Current server time:', new Date());
-    }
 
     // Group by channel, then by video
     const channelMap = new Map<string, DemandCategory>();
@@ -156,13 +151,29 @@ export async function GET() {
     // Add YouTube categories to the main categories array
     categories.push(...Array.from(channelMap.values()));
 
-    return NextResponse.json({ categories });
+    return NextResponse.json(
+      { categories },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
 
   } catch (error) {
     console.error('Error fetching demand categories:', error);
     return NextResponse.json(
       { error: 'Failed to fetch demand categories' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
     );
   }
 }
