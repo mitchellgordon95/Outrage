@@ -45,10 +45,19 @@ export default function DemandsPage() {
   const fetchCategories = async () => {
     try {
       setCategoriesLoading(true);
+      console.log('Fetching categories...');
       const response = await fetch('/api/demands/categories');
+      console.log('Categories response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Categories data:', data);
+        console.log('Number of categories:', data.categories?.length || 0);
         setCategories(data.categories || []);
+      } else {
+        console.error('Failed to fetch categories:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
