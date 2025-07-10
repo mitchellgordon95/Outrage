@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.1",
+    "@vercel/analytics": "^1.5.0",
     "apify-client": "^2.12.5",
     "next": "^14.2.0",
     "pg": "^8.16.0",
