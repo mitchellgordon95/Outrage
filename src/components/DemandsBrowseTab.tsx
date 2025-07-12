@@ -3,6 +3,7 @@
 import DemandCarousel from './DemandCarousel';
 import VideoCarousel from './VideoCarousel';
 import LocalCampaignsCarousel from './LocalCampaignsCarousel';
+import PopularCampaignsCarousel from './PopularCampaignsCarousel';
 import { LocationInfo } from '@/utils/geocoding';
 
 interface DemandsBrowseTabProps {
@@ -30,27 +31,8 @@ export default function DemandsBrowseTab({
     );
   }
 
-  if (categories.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Issues Yet!</h3>
-          <p className="text-gray-600 mb-6">
-            Be the first to raise important issues in your community.
-          </p>
-          {onSwitchToManual && (
-            <button
-              onClick={onSwitchToManual}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
-            >
-              Add Your Own
-              <span className="ml-2">→</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Don't show empty state if we have campaigns to show
+  // The individual carousels will handle their own empty states
 
   return (
     <div className="space-y-8">
@@ -62,7 +44,10 @@ export default function DemandsBrowseTab({
         />
       )}
       
-      {/* Other Categories */}
+      {/* Popular National Campaigns */}
+      <PopularCampaignsCarousel onSwitchToManual={onSwitchToManual} />
+      
+      {/* YouTube Categories */}
       {categories.map(category => {
         if (category.type === 'youtube_channel' && category.videos) {
           return (
