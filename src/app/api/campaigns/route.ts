@@ -10,6 +10,9 @@ interface Campaign {
   representatives: { name: string }[]; // Assuming Representative has a name property
   created_at: string; // Or Date, depending on how you want to handle it
   message_sent_count: number;
+  city?: string | null;
+  state?: string | null;
+  location_display?: string | null;
 }
 
 export async function GET(request: Request) {
@@ -17,6 +20,9 @@ export async function GET(request: Request) {
   const limitParam = searchParams.get('limit');
   const sortByParam = searchParams.get('sortBy');
   const orderParam = searchParams.get('order');
+  const cityParam = searchParams.get('city');
+  const stateParam = searchParams.get('state');
+  const includeNationalParam = searchParams.get('includeNational');
 
   const limit = limitParam ? parseInt(limitParam, 10) : 10;
   let sortBy = 'created_at'; // Default sort column
@@ -51,18 +57,64 @@ export async function GET(request: Request) {
     });
     client = await pool.connect();
 
-    // Basic query
-    let query = `SELECT id, title, description, demands, representatives, created_at, message_sent_count FROM campaigns`;
+    // Build query with location filtering
+    let query = `SELECT id, title, description, demands, representatives, city, state, location_display, created_at, message_sent_count FROM campaigns`;
+    const queryParams: any[] = [];
+    const whereClauses: string[] = [];
+    let paramIndex = 1;
 
-    // Append ORDER BY clause
-    // Ensure sortBy is a valid column name to prevent SQL injection if it were less controlled.
-    // Here, sortBy is controlled by our logic above, so it's safer.
-    query += ` ORDER BY ${sortBy} ${order}`;
+    // Handle location filtering
+    if (cityParam || stateParam) {
+      if (cityParam && stateParam) {
+        // City and state match (highest priority)
+        whereClauses.push(`(city = $${paramIndex} AND state = $${paramIndex + 1})`);
+        queryParams.push(cityParam, stateParam);
+        paramIndex += 2;
+        
+        // Also include state-only matches
+        whereClauses.push(`(city IS NULL AND state = $${paramIndex})`);
+        queryParams.push(stateParam);
+        paramIndex += 1;
+      } else if (stateParam) {
+        // State-only match
+        whereClauses.push(`state = $${paramIndex}`);
+        queryParams.push(stateParam);
+        paramIndex += 1;
+      }
+      
+      // Include national campaigns if requested
+      if (includeNationalParam === 'true') {
+        whereClauses.push(`(city IS NULL AND state IS NULL)`);
+      }
+      
+      if (whereClauses.length > 0) {
+        query += ` WHERE (${whereClauses.join(' OR ')})`;
+      }
+    }
+
+    // Add custom ordering for location matches
+    if (cityParam || stateParam) {
+      query += ` ORDER BY `;
+      query += `CASE `;
+      if (cityParam && stateParam) {
+        query += `WHEN city = '${cityParam}' AND state = '${stateParam}' THEN 1 `;
+        query += `WHEN city IS NULL AND state = '${stateParam}' THEN 2 `;
+      } else if (stateParam) {
+        query += `WHEN state = '${stateParam}' THEN 1 `;
+      }
+      query += `WHEN city IS NULL AND state IS NULL THEN 3 `;
+      query += `ELSE 4 END, `;
+      query += `${sortBy} ${order}`;
+    } else {
+      // Normal ordering
+      query += ` ORDER BY ${sortBy} ${order}`;
+    }
 
     // Append LIMIT clause
-    query += ` LIMIT $1`;
+    query += ` LIMIT $${paramIndex}`;
+    queryParams.push(limit);
 
-    const result: QueryResult<Campaign> = await client.query(query, [limit]);
+    const result: QueryResult<Campaign> = await client.query(query, queryParams);
 
     return NextResponse.json(result.rows, { status: 200 });
 

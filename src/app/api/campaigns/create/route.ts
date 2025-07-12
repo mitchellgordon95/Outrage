@@ -15,6 +15,9 @@ interface CampaignRequestBody {
   description?: string;
   demands: string[];
   representatives: Representative[];
+  city?: string;
+  state?: string;
+  locationDisplay?: string;
 }
 
 export async function POST(request: Request) {
@@ -22,7 +25,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json() as CampaignRequestBody;
-    const { title, description, demands, representatives } = body;
+    const { title, description, demands, representatives, city, state, locationDisplay } = body;
 
     // Validate required fields
     if (!title || !demands || !representatives) {
@@ -55,15 +58,18 @@ export async function POST(request: Request) {
     // SQL query to insert data
     // We use JSON.stringify for demands and representatives as they are JSONB types
     const query = `
-      INSERT INTO campaigns (title, description, demands, representatives)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, title, description, demands, representatives, created_at, message_sent_count;
+      INSERT INTO campaigns (title, description, demands, representatives, city, state, location_display)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, title, description, demands, representatives, city, state, location_display, created_at, message_sent_count;
     `;
     const values = [
       title,
       description || null, // Use null if description is not provided
       JSON.stringify(demands),
       JSON.stringify(representatives),
+      city || null,
+      state || null,
+      locationDisplay || null,
     ];
 
     const result = await client.query(query, values);

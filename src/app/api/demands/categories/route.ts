@@ -98,55 +98,7 @@ export async function GET() {
     }
 
     // TODO: Add other category types here in the future
-    // For now, adding some placeholder categories to demonstrate extensibility
-    
-    // Example: Local Issues (would be customized based on user location)
-    categories.push({
-      id: 'local_issues',
-      title: 'Local Issues in Your Area',
-      type: 'local',
-      demands: [
-        {
-          id: 'local_1',
-          text: 'Fix potholes on Main Street',
-          source: 'Community Board Meeting'
-        },
-        {
-          id: 'local_2',
-          text: 'Increase police patrols in downtown area',
-          source: 'Neighborhood Watch'
-        },
-        {
-          id: 'local_3',
-          text: 'Fund new public library branch',
-          source: 'Library Association'
-        }
-      ]
-    });
-    
-    // Example: Trending National Issues (placeholder for now)
-    categories.push({
-      id: 'trending_national',
-      title: 'Trending National Issues',
-      type: 'trending',
-      demands: [
-        {
-          id: 'placeholder_1',
-          text: 'Increase funding for public education by 20%',
-          source: 'National Education Survey 2025'
-        },
-        {
-          id: 'placeholder_2',
-          text: 'Implement universal healthcare coverage',
-          source: 'Healthcare Reform Coalition'
-        },
-        {
-          id: 'placeholder_3',
-          text: 'Pass comprehensive climate action legislation',
-          source: 'Climate Action Network'
-        }
-      ]
-    });
+    // Only return actual data, no placeholders
 
     // Add YouTube categories to the main categories array
     categories.push(...Array.from(channelMap.values()));

@@ -26,6 +26,9 @@ export default function Home() {
     created_at: string; // Assuming string representation from API
     demands: any[]; // Define more specifically if structure is known
     representatives: any[]; // Define more specifically if structure is known
+    city?: string | null;
+    state?: string | null;
+    location_display?: string | null;
   }
   const [popularCampaigns, setPopularCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
@@ -318,9 +321,16 @@ export default function Home() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">
-                    Created: {new Date(campaign.created_at).toLocaleDateString()}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm text-gray-500">
+                      Created: {new Date(campaign.created_at).toLocaleDateString()}
+                    </p>
+                    {campaign.location_display && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        📍 {campaign.location_display}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-md font-semibold text-gray-700">
                     Messages Sent: {campaign.message_sent_count}
                   </p>

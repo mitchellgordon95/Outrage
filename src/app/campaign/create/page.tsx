@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { parseDraftData, saveDraftData } from '@/utils/navigation';
 import { Representative } from '@/services/representatives'; // Assuming this path and type are correct
+import { geocodeAddressWithCache, loadGeocodingCache, LocationInfo } from '@/utils/geocoding';
 
 export default function CreateCampaignPage() {
   const router = useRouter();
@@ -19,6 +20,11 @@ export default function CreateCampaignPage() {
   const [isGeneratingInfo, setIsGeneratingInfo] = useState(false);
   const isInitialLoadDone = useRef(false);
   const hasGeneratedInfo = useRef(false);
+  
+  // Location state
+  const [userLocation, setUserLocation] = useState<LocationInfo | null>(null);
+  const [makeLocalCampaign, setMakeLocalCampaign] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     const draftData = parseDraftData();
@@ -45,7 +51,32 @@ export default function CreateCampaignPage() {
     setDemands(draftData.demands.filter(d => d && d.trim())); // Ensure valid demands
     setRepresentatives(draftData.representatives || []); // Use draftData.representatives
     setLocalStorageLoaded(true);
+    
+    // Load geocoding cache
+    loadGeocodingCache();
+    
+    // Geocode user's address
+    const userAddress = localStorage.getItem('userAddress');
+    if (userAddress) {
+      geocodeUserAddress(userAddress);
+    }
   }, [router]);
+  
+  const geocodeUserAddress = async (address: string) => {
+    setLocationLoading(true);
+    try {
+      const location = await geocodeAddressWithCache(address);
+      setUserLocation(location);
+      // Default to making it a local campaign if location is found
+      if (location.city || location.state) {
+        setMakeLocalCampaign(true);
+      }
+    } catch (error) {
+      console.error('Failed to geocode address:', error);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (representatives.length > 0) {
@@ -133,15 +164,24 @@ export default function CreateCampaignPage() {
     setIsLoading(true);
 
     try {
+      const campaignData: any = {
+        title,
+        description,
+        demands,
+        representatives: selectedCampaignReps.map(r => ({ id: r.id, name: r.name /* Add other rep fields if needed by API */ })),
+      };
+      
+      // Add location data if making a local campaign
+      if (makeLocalCampaign && userLocation) {
+        campaignData.city = userLocation.city;
+        campaignData.state = userLocation.stateCode || userLocation.state;
+        campaignData.locationDisplay = userLocation.locationDisplay;
+      }
+      
       const response = await fetch('/api/campaigns/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          demands,
-          representatives: selectedCampaignReps.map(r => ({ id: r.id, name: r.name /* Add other rep fields if needed by API */ })),
-        }),
+        body: JSON.stringify(campaignData),
       });
 
       const responseData = await response.json();
@@ -355,6 +395,38 @@ export default function CreateCampaignPage() {
               )}
             </div>
           </div>
+
+          {/* Location Selection */}
+          {userLocation && (userLocation.city || userLocation.state) && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <label className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  checked={makeLocalCampaign}
+                  onChange={(e) => setMakeLocalCampaign(e.target.checked)}
+                  className="mt-1 h-4 w-4 text-primary accent-primary"
+                  disabled={locationLoading}
+                />
+                <div className="flex-1">
+                  <span className="font-medium text-gray-700">
+                    Make this a local campaign for {userLocation.locationDisplay}
+                  </span>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Local campaigns are shown to users in your area, helping mobilize your community around shared issues.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+          
+          {locationLoading && (
+            <div className="mb-4 p-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
+              <p className="flex items-center">
+                <span className="mr-2">Detecting your location...</span>
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">

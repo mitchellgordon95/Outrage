@@ -9,6 +9,8 @@ import DemandTabs from '@/components/DemandTabs';
 import DemandsManualTab from '@/components/DemandsManualTab';
 import DemandsBrowseTab from '@/components/DemandsBrowseTab';
 import SelectedDemandsSummary from '@/components/SelectedDemandsSummary';
+import LocalCampaigns from '@/components/LocalCampaigns';
+import { geocodeAddressWithCache, loadGeocodingCache, LocationInfo } from '@/utils/geocoding';
 
 export default function DemandsPage() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function DemandsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'browse' | 'manual'>('browse');
+  const [userLocation, setUserLocation] = useState<LocationInfo | null>(null);
   
   useEffect(() => {
     const storedAddress = localStorage.getItem('userAddress');
@@ -40,7 +43,39 @@ export default function DemandsPage() {
     setHasCampaign(!!activeCampaignId);
     
     fetchCategories();
+    
+    // Load geocoding cache and geocode address
+    loadGeocodingCache();
+    
+    // Load Google Maps if not already loaded
+    if (!window.google || !window.google.maps) {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (apiKey) {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          geocodeUserAddress(storedAddress);
+        };
+        document.head.appendChild(script);
+      }
+    } else {
+      // Google Maps already loaded
+      geocodeUserAddress(storedAddress);
+    }
   }, [router]);
+  
+  const geocodeUserAddress = async (address: string) => {
+    try {
+      const location = await geocodeAddressWithCache(address);
+      console.log('Geocoded location:', location);
+      setUserLocation(location);
+    } catch (error) {
+      console.error('Failed to geocode address:', error);
+      // Don't block user experience if geocoding fails
+    }
+  };
   
   const fetchCategories = async () => {
     try {
@@ -240,6 +275,8 @@ export default function DemandsPage() {
               categoriesLoading={categoriesLoading}
               demands={demands}
               onSelectDemand={handleSelectDemand}
+              onSwitchToManual={() => setActiveTab('manual')}
+              userLocation={userLocation}
             />
           </div>
         )}
