@@ -9,7 +9,6 @@ import DemandTabs from '@/components/DemandTabs';
 import DemandsManualTab from '@/components/DemandsManualTab';
 import DemandsBrowseTab from '@/components/DemandsBrowseTab';
 import SelectedDemandsSummary from '@/components/SelectedDemandsSummary';
-import LocalCampaigns from '@/components/LocalCampaigns';
 import { geocodeAddressWithCache, loadGeocodingCache, LocationInfo } from '@/utils/geocoding';
 
 export default function DemandsPage() {

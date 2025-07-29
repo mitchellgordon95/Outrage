@@ -4,7 +4,8 @@
       "WebFetch(domain:developers.google.com)",
       "WebFetch(domain:www.googleapis.com)",
       "WebFetch(domain:civicinfo.googleapis.com)",
-      "WebFetch(domain:docs.openstates.org)"
+      "WebFetch(domain:docs.openstates.org)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }
