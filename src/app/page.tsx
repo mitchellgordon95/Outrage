@@ -351,18 +351,6 @@ export default function Home() {
             )}
           </div>
         )}
-
-        {/* Footer */}
-        <div className="text-center mt-8 text-gray-500 text-sm">
-          <a
-            href="https://github.com/yourusername/outrage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary underline"
-          >
-            View on GitHub
-          </a>
-        </div>
       </div>
     </main>
   );
