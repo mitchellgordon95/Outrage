@@ -362,6 +362,18 @@ export default function Home() {
                   </div>
                 )}
 
+                <p className="text-xs text-gray-500 mb-4">
+                  Using data published by{' '}
+                  <a
+                    href="https://www.cicerodata.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary"
+                  >
+                    Cicero
+                  </a>
+                </p>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {representatives
                     .filter(rep => rep.id && selectedRepIds.includes(rep.id))
