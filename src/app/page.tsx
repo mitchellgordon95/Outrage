@@ -38,6 +38,7 @@ export default function Home() {
   // Section 3: Representatives
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedRepIds, setSelectedRepIds] = useState<string[]>([]);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [repsLoading, setRepsLoading] = useState(false);
   const [repsError, setRepsError] = useState<string | null>(null);
 
@@ -136,12 +137,14 @@ export default function Home() {
         throw new Error('Failed to select representatives');
       }
 
-      const { selectedIds } = await selectResponse.json();
+      const { selectedIds, explanations: repExplanations } = await selectResponse.json();
       setSelectedRepIds(selectedIds);
+      setExplanations(repExplanations || {});
 
       // Store in localStorage
       localStorage.setItem('representatives', JSON.stringify(reps));
       localStorage.setItem('selectedRepIds', JSON.stringify(selectedIds));
+      localStorage.setItem('explanations', JSON.stringify(repExplanations || {}));
 
     } catch (error) {
       console.error('Error fetching representatives:', error);
@@ -165,6 +168,32 @@ export default function Home() {
         return '👤';
       default:
         return '📧';
+    }
+  };
+
+  const getLevelColor = (level: 'country' | 'state' | 'local') => {
+    switch (level) {
+      case 'country':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'state':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'local':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getLevelLabel = (level: 'country' | 'state' | 'local') => {
+    switch (level) {
+      case 'country':
+        return 'Federal';
+      case 'state':
+        return 'State';
+      case 'local':
+        return 'Local';
+      default:
+        return level;
     }
   };
 
@@ -311,16 +340,21 @@ export default function Home() {
                         key={rep.id}
                         className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-3 mb-3">
                           {rep.photoUrl && (
                             <img
                               src={rep.photoUrl}
                               alt={rep.name}
-                              className="w-16 h-16 rounded-full object-cover"
+                              className="w-16 h-16 rounded-full object-cover flex-shrink-0"
                             />
                           )}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-gray-900">{rep.name}</h3>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2 mb-1">
+                              <h3 className="font-semibold text-lg text-gray-900 flex-1">{rep.name}</h3>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${getLevelColor(rep.level)}`}>
+                                {getLevelLabel(rep.level)}
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-600">{rep.office}</p>
                             {rep.party && (
                               <p className="text-xs text-gray-500 mt-1">{rep.party}</p>
@@ -340,6 +374,14 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
+
+                        {/* AI Explanation */}
+                        {rep.id && explanations[rep.id] && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs font-medium text-gray-500 mb-1">Why selected:</p>
+                            <p className="text-sm text-gray-700">{explanations[rep.id]}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
