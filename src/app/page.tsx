@@ -40,6 +40,8 @@ export default function Home() {
   const [selectedRepIds, setSelectedRepIds] = useState<string[]>([]);
   const [selectionSummary, setSelectionSummary] = useState<string>('');
   const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
+  const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [repsLoading, setRepsLoading] = useState(false);
   const [repsError, setRepsError] = useState<string | null>(null);
 
@@ -197,6 +199,28 @@ export default function Home() {
         return 'Local';
       default:
         return level;
+    }
+  };
+
+  const toggleExplanation = (repId: string) => {
+    setExpandedExplanations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(repId)) {
+        newSet.delete(repId);
+      } else {
+        newSet.add(repId);
+      }
+      return newSet;
+    });
+  };
+
+  const copyToClipboard = async (text: string, contactKey: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedContact(contactKey);
+      setTimeout(() => setCopiedContact(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -368,15 +392,25 @@ export default function Home() {
 
                             {/* Contact methods */}
                             <div className="flex gap-2 mt-2">
-                              {rep.contacts.slice(0, 3).map((contact, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-lg"
-                                  title={`${contact.type}: ${contact.value}`}
-                                >
-                                  {getContactIcon(contact.type)}
-                                </span>
-                              ))}
+                              {rep.contacts.slice(0, 3).map((contact, idx) => {
+                                const contactKey = `${rep.id}-${idx}`;
+                                const isCopied = copiedContact === contactKey;
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => copyToClipboard(contact.value, contactKey)}
+                                    className="text-lg hover:scale-110 transition-transform cursor-pointer relative group"
+                                    title={`Click to copy ${contact.type}`}
+                                  >
+                                    {getContactIcon(contact.type)}
+                                    {isCopied && (
+                                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                        Copied!
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
@@ -384,8 +418,20 @@ export default function Home() {
                         {/* AI Explanation */}
                         {rep.id && explanations[rep.id] && (
                           <div className="mt-3 pt-3 border-t border-gray-100">
-                            <p className="text-xs font-medium text-gray-500 mb-1">Why selected:</p>
-                            <p className="text-sm text-gray-700">{explanations[rep.id]}</p>
+                            <button
+                              onClick={() => toggleExplanation(rep.id!)}
+                              className="w-full text-left flex items-center justify-between hover:text-primary transition-colors"
+                            >
+                              <p className="text-xs font-medium text-gray-500">
+                                {expandedExplanations.has(rep.id) ? 'Hide reasoning' : 'Why selected?'}
+                              </p>
+                              <span className="text-gray-400">
+                                {expandedExplanations.has(rep.id) ? '▼' : '▶'}
+                              </span>
+                            </button>
+                            {expandedExplanations.has(rep.id) && (
+                              <p className="text-sm text-gray-700 mt-2">{explanations[rep.id]}</p>
+                            )}
                           </div>
                         )}
                       </div>
