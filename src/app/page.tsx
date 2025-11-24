@@ -38,6 +38,7 @@ export default function Home() {
   // Section 3: Representatives
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedRepIds, setSelectedRepIds] = useState<string[]>([]);
+  const [selectionSummary, setSelectionSummary] = useState<string>('');
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [repsLoading, setRepsLoading] = useState(false);
   const [repsError, setRepsError] = useState<string | null>(null);
@@ -137,13 +138,15 @@ export default function Home() {
         throw new Error('Failed to select representatives');
       }
 
-      const { selectedIds, explanations: repExplanations } = await selectResponse.json();
+      const { selectedIds, summary, explanations: repExplanations } = await selectResponse.json();
       setSelectedRepIds(selectedIds);
+      setSelectionSummary(summary || '');
       setExplanations(repExplanations || {});
 
       // Store in localStorage
       localStorage.setItem('representatives', JSON.stringify(reps));
       localStorage.setItem('selectedRepIds', JSON.stringify(selectedIds));
+      localStorage.setItem('selectionSummary', summary || '');
       localStorage.setItem('explanations', JSON.stringify(repExplanations || {}));
 
     } catch (error) {
@@ -328,9 +331,12 @@ export default function Home() {
               </div>
             ) : representatives.length > 0 ? (
               <div className="space-y-4">
-                <p className="text-gray-600 text-sm mb-4">
-                  Based on what you wrote, we've identified the most relevant representatives for your message:
-                </p>
+                {selectionSummary && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium text-blue-900 mb-1">Selection Summary</p>
+                    <p className="text-sm text-blue-800">{selectionSummary}</p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {representatives
