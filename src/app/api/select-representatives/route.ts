@@ -1,45 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Representative } from '@/services/representatives';
 import Anthropic from '@anthropic-ai/sdk';
+import { unstable_cache } from 'next/cache';
+import crypto from 'crypto';
 
 interface RequestBody {
   demands: string[];
   representatives: Representative[];
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    // Parse request body
-    const { demands, representatives }: RequestBody = await request.json();
-    
-    // Validate request parameters
-    if (!demands || !Array.isArray(demands) || demands.length === 0) {
-      return NextResponse.json(
-        { error: 'Demands are required' },
-        { status: 400 }
-      );
-    }
-    
-    if (!representatives || !Array.isArray(representatives) || representatives.length === 0) {
-      return NextResponse.json(
-        { error: 'Representatives are required' },
-        { status: 400 }
-      );
-    }
-    
-    // Get API key from environment variables
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    
-    if (!apiKey) {
-      console.error('Missing API key for AI selection');
-      return NextResponse.json(
-        { error: 'Service unavailable - API key missing' },
-        { status: 503 }
-      );
-    }
-    
-    // Initialize Anthropic client
-    const anthropic = new Anthropic({ apiKey });
+// Create a cache key from demands and representative IDs
+function createCacheKey(demands: string[], representatives: Representative[]): string {
+  const repIds = representatives.map(r => r.id || r.name).sort().join(',');
+  const demandsStr = demands.sort().join('|');
+  const combined = `${demandsStr}::${repIds}`;
+  return crypto.createHash('md5').update(combined).digest('hex');
+}
+
+// Core AI selection logic (to be cached)
+async function selectRepresentativesWithAI(
+  demands: string[],
+  representatives: Representative[]
+): Promise<{ selectedIds: string[]; summary: string; explanations: Record<string, string> }> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Missing API key for AI selection');
+  }
+
+  // Initialize Anthropic client
+  const anthropic = new Anthropic({ apiKey });
     
     // Generate list of representatives with their details for the prompt
     const repsWithDetails = representatives.map((rep, index) => {
@@ -145,15 +135,77 @@ Example format:
       }
       
       // Return the selected IDs, summary, and explanations
-      return NextResponse.json({ 
+      return {
         selectedIds,
         summary: summary || 'Representatives were selected based on their relevance to your demands.',
         explanations: idExplanations
-      });
+      };
     } catch (error) {
       console.error('Error parsing AI response:', error, 'Response text:', responseText);
+      throw new Error('Failed to parse selected representatives');
+    }
+}
+
+// Cached version of the selection function
+const getCachedSelection = unstable_cache(
+  async (cacheKey: string, demands: string[], representatives: Representative[]) => {
+    console.log(`[CACHE] Selecting representatives for cache key: ${cacheKey.substring(0, 8)}...`);
+    return selectRepresentativesWithAI(demands, representatives);
+  },
+  ['representative-selection'],
+  {
+    revalidate: 86400, // 24 hours in seconds
+    tags: ['representative-selection']
+  }
+);
+
+export async function POST(request: NextRequest) {
+  try {
+    // Parse request body
+    const { demands, representatives }: RequestBody = await request.json();
+
+    // Validate request parameters
+    if (!demands || !Array.isArray(demands) || demands.length === 0) {
       return NextResponse.json(
-        { error: 'Failed to parse selected representatives', selectedIds: [] },
+        { error: 'Demands are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!representatives || !Array.isArray(representatives) || representatives.length === 0) {
+      return NextResponse.json(
+        { error: 'Representatives are required' },
+        { status: 400 }
+      );
+    }
+
+    // Get API key from environment variables
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      console.error('Missing API key for AI selection');
+      return NextResponse.json(
+        { error: 'Service unavailable - API key missing' },
+        { status: 503 }
+      );
+    }
+
+    try {
+      // Create cache key
+      const cacheKey = createCacheKey(demands, representatives);
+
+      // Try to get cached selection
+      const result = await getCachedSelection(cacheKey, demands, representatives);
+
+      // Add cache hit indicator to response headers
+      const response = NextResponse.json(result);
+      response.headers.set('X-Cache-Status', 'HIT');
+
+      return response;
+    } catch (error) {
+      console.error('Error in representative selection:', error);
+      return NextResponse.json(
+        { error: 'Failed to select representatives' },
         { status: 500 }
       );
     }
