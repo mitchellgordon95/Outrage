@@ -6,12 +6,13 @@ import { useEffect, useRef, useState } from 'react';
 /// <reference path="../types/globals.d.ts" />
 
 interface Representative {
-  id: string;
+  id?: string;
   name: string;
-  title: string;
+  office: string;
   party?: string;
-  photo_url?: string;
+  photoUrl?: string;
   contacts: Contact[];
+  level: 'country' | 'state' | 'local';
 }
 
 interface Contact {
@@ -118,7 +119,7 @@ export default function Home() {
         throw new Error('Failed to lookup representatives');
       }
 
-      const reps: Representative[] = await lookupResponse.json();
+      const { representatives: reps } = await lookupResponse.json();
       setRepresentatives(reps);
 
       // Step 2: AI auto-select relevant representatives
@@ -304,23 +305,23 @@ export default function Home() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {representatives
-                    .filter(rep => selectedRepIds.includes(rep.id))
+                    .filter(rep => rep.id && selectedRepIds.includes(rep.id))
                     .map((rep) => (
                       <div
                         key={rep.id}
                         className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-start gap-3">
-                          {rep.photo_url && (
+                          {rep.photoUrl && (
                             <img
-                              src={rep.photo_url}
+                              src={rep.photoUrl}
                               alt={rep.name}
                               className="w-16 h-16 rounded-full object-cover"
                             />
                           )}
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg text-gray-900">{rep.name}</h3>
-                            <p className="text-sm text-gray-600">{rep.title}</p>
+                            <p className="text-sm text-gray-600">{rep.office}</p>
                             {rep.party && (
                               <p className="text-xs text-gray-500 mt-1">{rep.party}</p>
                             )}
