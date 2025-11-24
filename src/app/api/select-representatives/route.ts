@@ -93,10 +93,7 @@ Example format:
       const match = responseText.match(/\{[\s\S]*\}/);
       if (!match) {
         console.error('Failed to find JSON object in AI response:', responseText);
-        return NextResponse.json(
-          { error: 'Failed to parse AI response', selectedIndices: [] },
-          { status: 500 }
-        );
+        throw new Error('Failed to parse AI response');
       }
       jsonStr = match[0];
     }
