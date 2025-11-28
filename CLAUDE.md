@@ -18,7 +18,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Automatically fetches representatives using Cicero API
    - AI auto-selects relevant representatives based on user's message
    - Displays selected representatives with photos, titles, party affiliation, and contact methods
-   - No action buttons yet (placeholder for future login/message generation features)
+   - Expands Section 4 after representatives are selected
+
+4. **Login** (Section 4):
+   - Email magic link authentication via Auth.js and Resend
+   - Passwordless sign-in flow
+   - Error handling for expired/invalid links
+   - Expands Section 5 once user is authenticated
+
+5. **Generate Messages** (Section 5):
+   - Placeholder for message generation (coming soon)
+   - Only visible when user is logged in
+   - Will use preserved API for draft generation
 
 ## Development Commands
 
@@ -34,6 +45,14 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 CICERO_API_KEY=your_cicero_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# Authentication (Auth.js v5)
+AUTH_SECRET=your_auth_secret  # Generate with: openssl rand -base64 32
+AUTH_URL=http://localhost:3000  # Set to production URL in Vercel
+RESEND_API_KEY=your_resend_api_key  # For magic link emails
+
+# Database
+DATABASE_URL=your_postgres_connection_string
 ```
 
 **Important**: The `.env` file is included in `.gitignore` to prevent exposing API keys in the repository.
@@ -60,17 +79,33 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 - Google Maps API for address autocomplete
 - Cicero API for representative lookup
 - Anthropic Claude API for AI representative selection and draft generation
+- Resend for transactional emails (magic links)
+
+**Authentication** (`/src/lib/auth.ts`):
+- Auth.js v5 (NextAuth) with PostgreSQL adapter
+- Email magic link authentication (passwordless)
+- Session management with database-backed sessions
+- Error handling with user-friendly modals
+- Database schema in `auth_migration.sql` with camelCase column names
+
+**Database Tables**:
+- `users` - User accounts with email verification status
+- `accounts` - OAuth provider data (for future OAuth support)
+- `sessions` - Active user sessions with expiry
+- `verification_token` - Magic link tokens for email authentication
+- `campaigns` - Campaign data (not yet used, reserved for future features)
 
 ### Planned Features (Not Yet Implemented)
 
-1. **Login Section** (Section 4):
-   - User authentication
-   - Profile management
-
-2. **Generate Messages Section** (Section 5):
+1. **Generate Messages Section** (Section 5):
    - Draft generation using preserved API
    - Email/webform submission via ChromeExtensionHelper
    - Message customization and editing
+
+2. **User Profile Management**:
+   - Save favorite representatives
+   - View message history
+   - Manage account settings
 
 ### Representative Lookup Implementation
 
