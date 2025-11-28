@@ -51,6 +51,23 @@ export default function Home() {
   const [signInEmail, setSignInEmail] = useState('');
   const [signInLoading, setSignInLoading] = useState(false);
   const [signInSuccess, setSignInSuccess] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Check for auth errors in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        'Configuration': 'Authentication configuration error. Please try again.',
+        'Verification': 'The magic link has expired or already been used. Please request a new one.',
+        'Default': 'An authentication error occurred. Please try again.'
+      };
+      setAuthError(errorMessages[error] || errorMessages['Default']);
+      // Clean up URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   // Load Google Maps on mount
   useEffect(() => {
@@ -252,6 +269,29 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center p-4 bg-gray-50">
       <div className="max-w-4xl w-full p-8">
+        {/* Auth Error Modal */}
+        {authError && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <span className="text-red-600 text-xl">⚠️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentication Error</h3>
+                  <p className="text-gray-700">{authError}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuthError(null)}
+                className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>
@@ -515,7 +555,7 @@ export default function Home() {
             ) : (
               <form onSubmit={handleSignIn} className="space-y-4">
                 <p className="text-gray-600 text-sm">
-                  Sign in to generate and send messages to your representatives.
+                  Login to generate copy-pastable messages and manage campaigns!
                 </p>
 
                 <input
@@ -537,6 +577,28 @@ export default function Home() {
                 </button>
               </form>
             )}
+          </div>
+        )}
+
+        {/* Section 5: Generate Messages (only shows when logged in) */}
+        {session && messageSubmitted && representatives.length > 0 && (
+          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                5
+              </span>
+              <h2 className="text-2xl font-semibold text-gray-800">Generate Messages</h2>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 text-sm">
+                Generate personalized messages to send to your selected representatives about the issues you care about.
+              </p>
+
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-md text-center">
+                <p className="text-gray-500 italic">Message generation coming soon...</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
