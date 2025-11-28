@@ -69,6 +69,58 @@ export default function Home() {
     }
   }, []);
 
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    try {
+      // Restore address
+      const savedAddress = localStorage.getItem('userAddress');
+      if (savedAddress) {
+        setAddress(savedAddress);
+        setAddressSubmitted(true);
+      }
+
+      // Restore message
+      const savedMessage = localStorage.getItem('userMessage');
+      if (savedMessage) {
+        setMessage(savedMessage);
+        setMessageSubmitted(true);
+      }
+
+      // Restore representatives data
+      const savedReps = localStorage.getItem('representatives');
+      if (savedReps) {
+        const parsedReps = JSON.parse(savedReps);
+        setRepresentatives(parsedReps);
+      }
+
+      const savedSelectedIds = localStorage.getItem('selectedRepIds');
+      if (savedSelectedIds) {
+        const parsedIds = JSON.parse(savedSelectedIds);
+        setSelectedRepIds(parsedIds);
+      }
+
+      const savedSummary = localStorage.getItem('selectionSummary');
+      if (savedSummary) {
+        setSelectionSummary(savedSummary);
+      }
+
+      const savedExplanations = localStorage.getItem('explanations');
+      if (savedExplanations) {
+        const parsedExplanations = JSON.parse(savedExplanations);
+        setExplanations(parsedExplanations);
+      }
+    } catch (error) {
+      console.error('Failed to restore state from localStorage:', error);
+      // If there's an error parsing localStorage, clear it to prevent future issues
+      localStorage.removeItem('userAddress');
+      localStorage.removeItem('userMessage');
+      localStorage.removeItem('representatives');
+      localStorage.removeItem('selectedRepIds');
+      localStorage.removeItem('selectionSummary');
+      localStorage.removeItem('explanations');
+    }
+  }, []);
+
   // Load Google Maps on mount
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
