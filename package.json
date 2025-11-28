@@ -11,12 +11,17 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.1",
+    "@auth/pg-adapter": "^1.11.1",
+    "@react-email/components": "^1.0.1",
+    "@react-email/render": "^2.0.0",
     "@vercel/analytics": "^1.5.0",
     "apify-client": "^2.12.5",
     "next": "^14.2.0",
-    "pg": "^8.16.0",
+    "next-auth": "^5.0.0-beta.30",
+    "pg": "^8.16.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "resend": "^6.5.2"
   },
   "devDependencies": {
     "@types/google.maps": "^3.58.1",

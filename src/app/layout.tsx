@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import SessionProvider from '@/components/SessionProvider'
 
 export const metadata: Metadata = {
   title: 'Outrage - Contact Your Representatives',
@@ -25,10 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen flex flex-col">
-          <div className="flex-grow">
-            {children}
-          </div>
+        <SessionProvider>
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-grow">
+              {children}
+            </div>
           <footer className="bg-gray-100 border-t border-gray-200 py-4 px-4 mt-8">
             <div className="max-w-4xl mx-auto text-center flex items-center justify-center gap-4">
               <a 
@@ -51,7 +53,8 @@ export default function RootLayout({
               </a>
             </div>
           </footer>
-        </div>
+          </div>
+        </SessionProvider>
         <Analytics />
       </body>
     </html>

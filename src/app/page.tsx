@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 // Import from our custom type definition
 /// <reference path="../types/globals.d.ts" />
@@ -24,6 +25,7 @@ interface Contact {
 export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const { data: session, status } = useSession();
 
   // Section 1: Address
   const [address, setAddress] = useState('');
@@ -44,6 +46,11 @@ export default function Home() {
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [repsLoading, setRepsLoading] = useState(false);
   const [repsError, setRepsError] = useState<string | null>(null);
+
+  // Section 4: Sign In
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInLoading, setSignInLoading] = useState(false);
+  const [signInSuccess, setSignInSuccess] = useState(false);
 
   // Load Google Maps on mount
   useEffect(() => {
@@ -221,6 +228,24 @@ export default function Home() {
       setTimeout(() => setCopiedContact(null), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signInEmail) return;
+
+    setSignInLoading(true);
+    try {
+      await signIn('resend', {
+        email: signInEmail,
+        redirect: false,
+      });
+      setSignInSuccess(true);
+    } catch (error) {
+      console.error('Failed to sign in:', error);
+    } finally {
+      setSignInLoading(false);
     }
   };
 
@@ -454,6 +479,63 @@ export default function Home() {
               <div className="text-center text-gray-500 bg-gray-50 p-4 rounded-md border border-gray-200">
                 <p>No representatives found for your address.</p>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 4: Sign In */}
+        {messageSubmitted && representatives.length > 0 && (
+          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                4
+              </span>
+              <h2 className="text-2xl font-semibold text-gray-800">Sign In</h2>
+            </div>
+
+            {session ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-green-800 font-medium">Signed in as {session.user?.email}</p>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="text-primary underline text-sm"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : signInSuccess ? (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-800 font-medium">Check your email!</p>
+                <p className="text-blue-700 text-sm mt-2">
+                  We sent you a magic link to sign in. Click the link in your email to continue.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <p className="text-gray-600 text-sm">
+                  Sign in to generate and send messages to your representatives.
+                </p>
+
+                <input
+                  type="email"
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="your.email@example.com"
+                  required
+                  disabled={signInLoading}
+                />
+
+                <button
+                  type="submit"
+                  className="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium disabled:opacity-50"
+                  disabled={!signInEmail || signInLoading}
+                >
+                  {signInLoading ? 'Sending magic link...' : 'Sign in with email'}
+                </button>
+              </form>
             )}
           </div>
         )}
