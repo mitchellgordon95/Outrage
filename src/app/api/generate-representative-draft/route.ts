@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import crypto from 'crypto';
 
 import { Contact } from '@/services/representatives';
+import { auth } from '@/lib/auth';
 
 interface RequestBody {
   demands: string[];
@@ -329,7 +330,18 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Draft generation API called');
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
-    
+
+    // Check authentication
+    const session = await auth();
+    if (!session) {
+      console.log('Unauthorized request - no valid session');
+      return NextResponse.json(
+        { error: 'Unauthorized - please sign in to generate drafts' },
+        { status: 401 }
+      );
+    }
+    console.log('Authenticated user:', session.user?.email);
+
     // Parse request body
     const requestBody = await parseRequestBody(request);
     if (!requestBody) {
