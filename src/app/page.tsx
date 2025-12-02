@@ -53,6 +53,17 @@ export default function Home() {
   const [signInSuccess, setSignInSuccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Section 5: Generate Messages
+  const [personalInfo, setPersonalInfo] = useState('');
+  const [generatedDrafts, setGeneratedDrafts] = useState<Record<string, { subject: string; content: string }>>({});
+  const [generatingDrafts, setGeneratingDrafts] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [draftsGenerated, setDraftsGenerated] = useState(false);
+
+  // Section 6: Send Messages
+  const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
+  const [copiedDraft, setCopiedDraft] = useState<string | null>(null);
+
   // Check for auth errors in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -315,6 +326,87 @@ export default function Home() {
       console.error('Failed to sign in:', error);
     } finally {
       setSignInLoading(false);
+    }
+  };
+
+  const handleGenerateDrafts = async () => {
+    if (!message) return;
+
+    setGeneratingDrafts(true);
+    setGenerationError(null);
+
+    try {
+      const selectedReps = representatives.filter(rep =>
+        selectedRepIds.includes(rep.id || '')
+      );
+
+      const drafts: Record<string, { subject: string; content: string }> = {};
+
+      // Generate draft for each selected representative
+      for (const rep of selectedReps) {
+        try {
+          const response = await fetch('/api/generate-representative-draft', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              demands: [message],
+              personalInfo: personalInfo || undefined,
+              recipient: {
+                name: rep.name,
+                office: rep.office,
+                contacts: rep.contacts,
+              },
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to generate draft');
+          }
+
+          const draft = await response.json();
+          if (rep.id) {
+            drafts[rep.id] = draft;
+          }
+        } catch (error) {
+          console.error(`Failed to generate draft for ${rep.name}:`, error);
+          // Continue with other reps even if one fails
+        }
+      }
+
+      if (Object.keys(drafts).length === 0) {
+        throw new Error('Failed to generate any drafts');
+      }
+
+      setGeneratedDrafts(drafts);
+      setDraftsGenerated(true);
+
+      // Auto-expand first draft
+      const firstRepId = selectedReps[0]?.id;
+      if (firstRepId) {
+        setExpandedDraft(firstRepId);
+      }
+    } catch (error) {
+      console.error('Failed to generate drafts:', error);
+      setGenerationError(error instanceof Error ? error.message : 'Failed to generate messages');
+    } finally {
+      setGeneratingDrafts(false);
+    }
+  };
+
+  const toggleDraft = (repId: string) => {
+    setExpandedDraft(prev => prev === repId ? null : repId);
+  };
+
+  const copyDraft = async (text: string, type: 'subject' | 'content', repId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedDraft(`${repId}-${type}`);
+      setTimeout(() => setCopiedDraft(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -632,8 +724,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Section 5: Generate Messages (only shows when logged in) */}
-        {session && messageSubmitted && representatives.length > 0 && (
+        {/* Section 5: Generate Messages (only shows when logged in and not yet generated) */}
+        {session && messageSubmitted && representatives.length > 0 && !draftsGenerated && (
           <div className="bg-white p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
@@ -644,12 +736,196 @@ export default function Home() {
 
             <div className="space-y-4">
               <p className="text-gray-600 text-sm">
-                Generate personalized messages to send to your selected representatives about the issues you care about.
+                Add your personal information to make the messages more impactful, then generate drafts for your selected representatives.
               </p>
 
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-md text-center">
-                <p className="text-gray-500 italic">Message generation coming soon...</p>
+              <div>
+                <label htmlFor="personalInfo" className="block text-sm font-medium text-gray-700 mb-2">
+                  Personal Information (Optional)
+                </label>
+                <textarea
+                  id="personalInfo"
+                  value={personalInfo}
+                  onChange={(e) => setPersonalInfo(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  placeholder="e.g., Your name, email, phone, city/state, party affiliation, relevant demographics, or anything that might help personalize your message..."
+                  rows={4}
+                  disabled={generatingDrafts}
+                />
               </div>
+
+              {generationError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-800 text-sm">{generationError}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleGenerateDrafts}
+                disabled={generatingDrafts}
+                className="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generatingDrafts ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Generating messages...
+                  </span>
+                ) : (
+                  'Generate Messages'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Section 6: Send Messages (only shows when drafts are generated) */}
+        {session && messageSubmitted && representatives.length > 0 && draftsGenerated && (
+          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                6
+              </span>
+              <h2 className="text-2xl font-semibold text-gray-800">Your Generated Messages</h2>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 text-sm mb-4">
+                Click on each representative to view their contact information and generated message. Copy and paste the message to send it via email or their web form.
+              </p>
+
+              {representatives
+                .filter(rep => selectedRepIds.includes(rep.id || '') && generatedDrafts[rep.id || ''])
+                .map((rep) => {
+                  const repId = rep.id || '';
+                  const draft = generatedDrafts[repId];
+                  const isExpanded = expandedDraft === repId;
+
+                  return (
+                    <div key={repId} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Header - Always visible */}
+                      <button
+                        onClick={() => toggleDraft(repId)}
+                        className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-4">
+                          {rep.photoUrl && (
+                            <img
+                              src={rep.photoUrl}
+                              alt={rep.name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          )}
+                          <div className="text-left">
+                            <h3 className="font-semibold text-gray-900">{rep.name}</h3>
+                            <p className="text-sm text-gray-600">{rep.office}</p>
+                            {rep.party && (
+                              <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-700">
+                                {rep.party}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <svg
+                          className={`w-6 h-6 text-gray-500 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <div className="p-4 space-y-4 border-t border-gray-200">
+                          {/* Contact Information */}
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
+                            <div className="space-y-2">
+                              {rep.contacts.map((contact, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-lg flex-shrink-0">{getContactIcon(contact.type)}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-xs text-gray-500 uppercase">{contact.type}</span>
+                                      <p className="text-sm text-gray-900 truncate">{contact.value}</p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => copyToClipboard(contact.value, `${repId}-contact-${idx}`)}
+                                    className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                  >
+                                    {copiedContact === `${repId}-contact-${idx}` ? 'Copied!' : 'Copy'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Generated Message */}
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Generated Message</h4>
+
+                            {/* Subject */}
+                            <div className="mb-3">
+                              <label className="text-xs text-gray-500 uppercase mb-1 block">Subject</label>
+                              <div className="flex gap-2">
+                                <div className="flex-1 p-3 bg-gray-50 rounded border border-gray-200">
+                                  <p className="text-sm text-gray-900">{draft.subject}</p>
+                                </div>
+                                <button
+                                  onClick={() => copyDraft(draft.subject, 'subject', repId)}
+                                  className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                >
+                                  {copiedDraft === `${repId}-subject` ? 'Copied!' : 'Copy'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Message Body */}
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase mb-1 block">Message</label>
+                              <div className="flex gap-2">
+                                <div className="flex-1 p-3 bg-gray-50 rounded border border-gray-200">
+                                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{draft.content}</p>
+                                </div>
+                                <button
+                                  onClick={() => copyDraft(draft.content, 'content', repId)}
+                                  className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                >
+                                  {copiedDraft === `${repId}-content` ? 'Copied!' : 'Copy'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Copy Both Button */}
+                            <button
+                              onClick={() => copyDraft(`${draft.subject}\n\n${draft.content}`, 'content', repId)}
+                              className="mt-3 w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+                            >
+                              Copy Subject + Message
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+              {/* Generate New Messages Button */}
+              <button
+                onClick={() => {
+                  setDraftsGenerated(false);
+                  setGeneratedDrafts({});
+                  setExpandedDraft(null);
+                }}
+                className="w-full mt-4 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                Generate New Messages
+              </button>
             </div>
           </div>
         )}
