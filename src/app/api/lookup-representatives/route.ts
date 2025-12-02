@@ -287,7 +287,7 @@ async function fetchRepresentativesFromCicero(address: string): Promise<Represen
 }
 
 // Cached version of the fetch function
-// Cache for 24 hours (86400 seconds) since representatives rarely change
+// Cache for 3 days (259,200 seconds) - balances cost savings with data freshness
 const getCachedRepresentatives = unstable_cache(
   async (normalizedAddress: string) => {
     console.log(`[CACHE] Fetching representatives for: ${normalizedAddress.substring(0, 30)}...`);
@@ -295,7 +295,7 @@ const getCachedRepresentatives = unstable_cache(
   },
   ['representatives'], // cache key prefix
   {
-    revalidate: 86400, // 24 hours in seconds
+    revalidate: 259200, // 3 days in seconds
     tags: ['representatives'] // allows manual cache invalidation if needed
   }
 );

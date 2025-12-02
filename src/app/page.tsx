@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import PersonalInfoCheckboxes from '@/components/PersonalInfoCheckboxes';
 
 // Import from our custom type definition
 /// <reference path="../types/globals.d.ts" />
@@ -39,7 +40,8 @@ export default function Home() {
 
   // Section 3: Representatives
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
-  const [selectedRepIds, setSelectedRepIds] = useState<string[]>([]);
+  const [selectedRepIds, setSelectedRepIds] = useState<string[]>([]); // AI-selected reps
+  const [userSelectedRepIds, setUserSelectedRepIds] = useState<string[]>([]); // User-checked reps
   const [selectionSummary, setSelectionSummary] = useState<string>('');
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
@@ -59,6 +61,21 @@ export default function Home() {
   const [generatingDrafts, setGeneratingDrafts] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [draftsGenerated, setDraftsGenerated] = useState(false);
+
+  // Personal info detection
+  const [detectedCategories, setDetectedCategories] = useState({
+    name: false,
+    email: false,
+    phone: false,
+    location: false,
+    party: false,
+    demographics: false,
+    occupation: false,
+    community_role: false,
+    why_you_care: false,
+  });
+  const [detecting, setDetecting] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Section 6: Send Messages
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
@@ -108,6 +125,19 @@ export default function Home() {
       if (savedSelectedIds) {
         const parsedIds = JSON.parse(savedSelectedIds);
         setSelectedRepIds(parsedIds);
+      }
+
+      const savedUserSelectedIds = localStorage.getItem('userSelectedRepIds');
+      if (savedUserSelectedIds) {
+        const parsedIds = JSON.parse(savedUserSelectedIds);
+        setUserSelectedRepIds(parsedIds);
+      } else {
+        // If no user selection exists, default to AI-selected reps
+        const savedSelectedIds = localStorage.getItem('selectedRepIds');
+        if (savedSelectedIds) {
+          const parsedIds = JSON.parse(savedSelectedIds);
+          setUserSelectedRepIds(parsedIds);
+        }
       }
 
       const savedSummary = localStorage.getItem('selectionSummary');
@@ -161,6 +191,66 @@ export default function Home() {
       }
     };
   }, []);
+
+  // Debounced personal info detection
+  useEffect(() => {
+    // Cancel previous request if still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (!personalInfo.trim()) {
+      setDetectedCategories({
+        name: false,
+        email: false,
+        phone: false,
+        location: false,
+        party: false,
+        demographics: false,
+        occupation: false,
+        community_role: false,
+        why_you_care: false,
+      });
+      return;
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    const timeoutId = setTimeout(async () => {
+      setDetecting(true);
+      try {
+        const response = await fetch('/api/detect-personal-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: personalInfo }),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('Detection failed');
+        }
+
+        const data = await response.json();
+        setDetectedCategories(data.detected);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request was cancelled - ignore
+          return;
+        }
+        console.error('Detection failed:', error);
+        // Fail silently - keep existing checkboxes state
+      } finally {
+        setDetecting(false);
+        abortControllerRef.current = null;
+      }
+    }, 800); // 800ms debounce
+
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [personalInfo]);
 
   const initAutocomplete = () => {
     if (!inputRef.current || !window.google) return;
@@ -229,12 +319,14 @@ export default function Home() {
 
       const { selectedIds, summary, explanations: repExplanations } = await selectResponse.json();
       setSelectedRepIds(selectedIds);
+      setUserSelectedRepIds(selectedIds); // Initialize user selection with AI selection
       setSelectionSummary(summary || '');
       setExplanations(repExplanations || {});
 
       // Store in localStorage
       localStorage.setItem('representatives', JSON.stringify(reps));
       localStorage.setItem('selectedRepIds', JSON.stringify(selectedIds));
+      localStorage.setItem('userSelectedRepIds', JSON.stringify(selectedIds));
       localStorage.setItem('selectionSummary', summary || '');
       localStorage.setItem('explanations', JSON.stringify(repExplanations || {}));
 
@@ -301,6 +393,16 @@ export default function Home() {
     });
   };
 
+  const toggleRepSelection = (repId: string) => {
+    setUserSelectedRepIds(prev => {
+      const newIds = prev.includes(repId)
+        ? prev.filter(id => id !== repId)
+        : [...prev, repId];
+      localStorage.setItem('userSelectedRepIds', JSON.stringify(newIds));
+      return newIds;
+    });
+  };
+
   const copyToClipboard = async (text: string, contactKey: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -336,14 +438,17 @@ export default function Home() {
     setGenerationError(null);
 
     try {
+      // Use user-selected reps instead of AI-selected
       const selectedReps = representatives.filter(rep =>
-        selectedRepIds.includes(rep.id || '')
+        userSelectedRepIds.includes(rep.id || '')
       );
 
-      const drafts: Record<string, { subject: string; content: string }> = {};
+      if (selectedReps.length === 0) {
+        throw new Error('Please select at least one representative');
+      }
 
-      // Generate draft for each selected representative
-      for (const rep of selectedReps) {
+      // Generate all drafts in parallel for better performance
+      const draftPromises = selectedReps.map(async (rep) => {
         try {
           const response = await fetch('/api/generate-representative-draft', {
             method: 'POST',
@@ -367,14 +472,21 @@ export default function Home() {
           }
 
           const draft = await response.json();
-          if (rep.id) {
-            drafts[rep.id] = draft;
-          }
+          return { repId: rep.id!, draft };
         } catch (error) {
           console.error(`Failed to generate draft for ${rep.name}:`, error);
-          // Continue with other reps even if one fails
+          return null;
         }
-      }
+      });
+
+      const results = await Promise.all(draftPromises);
+      const drafts: Record<string, { subject: string; content: string }> = {};
+
+      results.forEach(result => {
+        if (result && result.repId) {
+          drafts[result.repId] = result.draft;
+        }
+      });
 
       if (Object.keys(drafts).length === 0) {
         throw new Error('Failed to generate any drafts');
@@ -583,80 +695,95 @@ export default function Home() {
                   </a>
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {representatives
                     .filter(rep => rep.id && selectedRepIds.includes(rep.id))
-                    .map((rep) => (
-                      <div
-                        key={rep.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start gap-3 mb-3">
-                          {rep.photoUrl && (
-                            <img
-                              src={rep.photoUrl}
-                              alt={rep.name}
-                              className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                    .map((rep) => {
+                      const isChecked = userSelectedRepIds.includes(rep.id || '');
+                      return (
+                        <div
+                          key={rep.id}
+                          className={`border rounded-lg p-3 transition-all ${
+                            isChecked
+                              ? 'border-primary bg-blue-50'
+                              : 'border-gray-200 bg-white opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleRepSelection(rep.id || '')}
+                              className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer flex-shrink-0"
                             />
+
+                            {rep.photoUrl && (
+                              <img
+                                src={rep.photoUrl}
+                                alt={rep.name}
+                                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-2 mb-0.5">
+                                <h3 className="font-semibold text-base text-gray-900 flex-1">{rep.name}</h3>
+                                <span className={`px-1.5 py-0.5 text-xs font-medium rounded border flex-shrink-0 ${getLevelColor(rep.level)}`}>
+                                  {getLevelLabel(rep.level)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600">{rep.office}</p>
+                              {rep.party && (
+                                <p className="text-xs text-gray-500">{rep.party}</p>
+                              )}
+
+                              {/* Contact methods */}
+                              <div className="flex gap-1.5 mt-1.5">
+                                {rep.contacts.slice(0, 3).map((contact, idx) => {
+                                  const contactKey = `${rep.id}-${idx}`;
+                                  const isCopied = copiedContact === contactKey;
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => copyToClipboard(contact.value, contactKey)}
+                                      className="text-base hover:scale-110 transition-transform cursor-pointer relative group"
+                                      title={`Click to copy ${contact.type}`}
+                                    >
+                                      {getContactIcon(contact.type)}
+                                      {isCopied && (
+                                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                                          Copied!
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* AI Explanation */}
+                          {rep.id && explanations[rep.id] && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <button
+                                onClick={() => toggleExplanation(rep.id!)}
+                                className="w-full text-left flex items-center justify-between hover:text-primary transition-colors"
+                              >
+                                <p className="text-xs font-medium text-gray-500">
+                                  {expandedExplanations.has(rep.id) ? 'Hide reasoning' : 'Why selected?'}
+                                </p>
+                                <span className="text-gray-400 text-xs">
+                                  {expandedExplanations.has(rep.id) ? '▼' : '▶'}
+                                </span>
+                              </button>
+                              {expandedExplanations.has(rep.id) && (
+                                <p className="text-xs text-gray-700 mt-1.5">{explanations[rep.id]}</p>
+                              )}
+                            </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-2 mb-1">
-                              <h3 className="font-semibold text-lg text-gray-900 flex-1">{rep.name}</h3>
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${getLevelColor(rep.level)}`}>
-                                {getLevelLabel(rep.level)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600">{rep.office}</p>
-                            {rep.party && (
-                              <p className="text-xs text-gray-500 mt-1">{rep.party}</p>
-                            )}
-
-                            {/* Contact methods */}
-                            <div className="flex gap-2 mt-2">
-                              {rep.contacts.slice(0, 3).map((contact, idx) => {
-                                const contactKey = `${rep.id}-${idx}`;
-                                const isCopied = copiedContact === contactKey;
-                                return (
-                                  <button
-                                    key={idx}
-                                    onClick={() => copyToClipboard(contact.value, contactKey)}
-                                    className="text-lg hover:scale-110 transition-transform cursor-pointer relative group"
-                                    title={`Click to copy ${contact.type}`}
-                                  >
-                                    {getContactIcon(contact.type)}
-                                    {isCopied && (
-                                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                                        Copied!
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
                         </div>
-
-                        {/* AI Explanation */}
-                        {rep.id && explanations[rep.id] && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <button
-                              onClick={() => toggleExplanation(rep.id!)}
-                              className="w-full text-left flex items-center justify-between hover:text-primary transition-colors"
-                            >
-                              <p className="text-xs font-medium text-gray-500">
-                                {expandedExplanations.has(rep.id) ? 'Hide reasoning' : 'Why selected?'}
-                              </p>
-                              <span className="text-gray-400">
-                                {expandedExplanations.has(rep.id) ? '▼' : '▶'}
-                              </span>
-                            </button>
-                            {expandedExplanations.has(rep.id) && (
-                              <p className="text-sm text-gray-700 mt-2">{explanations[rep.id]}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             ) : (
@@ -668,7 +795,7 @@ export default function Home() {
         )}
 
         {/* Section 4: Sign In */}
-        {messageSubmitted && representatives.length > 0 && (
+        {messageSubmitted && !repsLoading && representatives.length > 0 && (
           <div className="bg-white p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
@@ -724,8 +851,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Section 5: Generate Messages (only shows when logged in and not yet generated) */}
-        {session && messageSubmitted && representatives.length > 0 && !draftsGenerated && (
+        {/* Section 5: Generate Messages (only shows when logged in) */}
+        {session && messageSubmitted && !repsLoading && representatives.length > 0 && (
           <div className="bg-white p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
@@ -743,6 +870,10 @@ export default function Home() {
                 <label htmlFor="personalInfo" className="block text-sm font-medium text-gray-700 mb-2">
                   Personal Information (Optional)
                 </label>
+
+                {/* Auto-detecting checkboxes */}
+                <PersonalInfoCheckboxes detected={detectedCategories} detecting={detecting} />
+
                 <textarea
                   id="personalInfo"
                   value={personalInfo}
@@ -773,6 +904,8 @@ export default function Home() {
                     </svg>
                     Generating messages...
                   </span>
+                ) : draftsGenerated ? (
+                  'Regenerate Messages'
                 ) : (
                   'Generate Messages'
                 )}
@@ -782,7 +915,7 @@ export default function Home() {
         )}
 
         {/* Section 6: Send Messages (only shows when drafts are generated) */}
-        {session && messageSubmitted && representatives.length > 0 && draftsGenerated && (
+        {session && messageSubmitted && !repsLoading && representatives.length > 0 && draftsGenerated && (
           <div className="bg-white p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
@@ -793,139 +926,119 @@ export default function Home() {
 
             <div className="space-y-4">
               <p className="text-gray-600 text-sm mb-4">
-                Click on each representative to view their contact information and generated message. Copy and paste the message to send it via email or their web form.
+                Click on a representative to view their contact information and generated message.
               </p>
 
-              {representatives
-                .filter(rep => selectedRepIds.includes(rep.id || '') && generatedDrafts[rep.id || ''])
-                .map((rep) => {
-                  const repId = rep.id || '';
-                  const draft = generatedDrafts[repId];
-                  const isExpanded = expandedDraft === repId;
-
-                  return (
-                    <div key={repId} className="border border-gray-200 rounded-lg overflow-hidden">
-                      {/* Header - Always visible */}
+              {/* Representative badges */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {representatives
+                  .filter(rep => userSelectedRepIds.includes(rep.id || '') && generatedDrafts[rep.id || ''])
+                  .map((rep) => {
+                    const repId = rep.id || '';
+                    const isSelected = expandedDraft === repId;
+                    return (
                       <button
-                        onClick={() => toggleDraft(repId)}
-                        className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        key={repId}
+                        onClick={() => setExpandedDraft(repId)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 transition-all ${
+                          isSelected
+                            ? `border-current ${getLevelColor(rep.level)}`
+                            : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                        }`}
                       >
-                        <div className="flex items-center gap-4">
-                          {rep.photoUrl && (
-                            <img
-                              src={rep.photoUrl}
-                              alt={rep.name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          )}
-                          <div className="text-left">
-                            <h3 className="font-semibold text-gray-900">{rep.name}</h3>
-                            <p className="text-sm text-gray-600">{rep.office}</p>
-                            {rep.party && (
-                              <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-700">
-                                {rep.party}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <svg
-                          className={`w-6 h-6 text-gray-500 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        {rep.photoUrl && (
+                          <img
+                            src={rep.photoUrl}
+                            alt={rep.name}
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                        )}
+                        <span className={`text-sm font-medium ${isSelected ? '' : 'text-gray-600'}`}>
+                          {rep.name}
+                        </span>
                       </button>
+                    );
+                  })}
+              </div>
 
-                      {/* Expanded Content */}
-                      {isExpanded && (
-                        <div className="p-4 space-y-4 border-t border-gray-200">
-                          {/* Contact Information */}
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
-                            <div className="space-y-2">
-                              {rep.contacts.map((contact, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <span className="text-lg flex-shrink-0">{getContactIcon(contact.type)}</span>
-                                    <div className="flex-1 min-w-0">
-                                      <span className="text-xs text-gray-500 uppercase">{contact.type}</span>
-                                      <p className="text-sm text-gray-900 truncate">{contact.value}</p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => copyToClipboard(contact.value, `${repId}-contact-${idx}`)}
-                                    className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
-                                  >
-                                    {copiedContact === `${repId}-contact-${idx}` ? 'Copied!' : 'Copy'}
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+              {/* Selected representative's content */}
+              {(() => {
+                const selectedRep = representatives.find(rep => rep.id === expandedDraft);
+                if (!selectedRep || !generatedDrafts[expandedDraft || '']) return null;
 
-                          {/* Generated Message */}
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Generated Message</h4>
+                const draft = generatedDrafts[expandedDraft || ''];
 
-                            {/* Subject */}
-                            <div className="mb-3">
-                              <label className="text-xs text-gray-500 uppercase mb-1 block">Subject</label>
-                              <div className="flex gap-2">
-                                <div className="flex-1 p-3 bg-gray-50 rounded border border-gray-200">
-                                  <p className="text-sm text-gray-900">{draft.subject}</p>
-                                </div>
-                                <button
-                                  onClick={() => copyDraft(draft.subject, 'subject', repId)}
-                                  className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
-                                >
-                                  {copiedDraft === `${repId}-subject` ? 'Copied!' : 'Copy'}
-                                </button>
+                return (
+                  <div className="space-y-6">
+                    {/* Contact Information */}
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Contact Information</h4>
+                      <div className="space-y-2">
+                        {selectedRep.contacts.map((contact, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="text-base flex-shrink-0">{getContactIcon(contact.type)}</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs text-gray-500 uppercase block">{contact.type}</span>
+                                <p className="text-sm text-gray-900 truncate">{contact.value}</p>
                               </div>
                             </div>
-
-                            {/* Message Body */}
-                            <div>
-                              <label className="text-xs text-gray-500 uppercase mb-1 block">Message</label>
-                              <div className="flex gap-2">
-                                <div className="flex-1 p-3 bg-gray-50 rounded border border-gray-200">
-                                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{draft.content}</p>
-                                </div>
-                                <button
-                                  onClick={() => copyDraft(draft.content, 'content', repId)}
-                                  className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
-                                >
-                                  {copiedDraft === `${repId}-content` ? 'Copied!' : 'Copy'}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Copy Both Button */}
                             <button
-                              onClick={() => copyDraft(`${draft.subject}\n\n${draft.content}`, 'content', repId)}
-                              className="mt-3 w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+                              onClick={() => copyToClipboard(contact.value, `${expandedDraft}-contact-${idx}`)}
+                              className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
                             >
-                              Copy Subject + Message
+                              {copiedContact === `${expandedDraft}-contact-${idx}` ? 'Copied!' : 'Copy'}
                             </button>
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  );
-                })}
 
-              {/* Generate New Messages Button */}
-              <button
-                onClick={() => {
-                  setDraftsGenerated(false);
-                  setGeneratedDrafts({});
-                  setExpandedDraft(null);
-                }}
-                className="w-full mt-4 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-              >
-                Generate New Messages
-              </button>
+                    {/* Generated Message */}
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Generated Message</h4>
+
+                      {/* Subject */}
+                      <div className="mb-4">
+                        <label className="text-xs text-gray-500 uppercase mb-2 block">Subject</label>
+                        <div className="flex gap-2">
+                          <div className="flex-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-900">{draft.subject}</p>
+                          </div>
+                          <button
+                            onClick={() => copyDraft(draft.subject, 'subject', expandedDraft || '')}
+                            className="px-3 py-2 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                          >
+                            {copiedDraft === `${expandedDraft}-subject` ? '✓' : 'Copy'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Message Body */}
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase mb-2 block">Message</label>
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mb-3">
+                          <p className="text-sm text-gray-900 whitespace-pre-wrap">{draft.content}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => copyDraft(draft.content, 'content', expandedDraft || '')}
+                            className="flex-1 px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors font-medium"
+                          >
+                            {copiedDraft === `${expandedDraft}-content` ? 'Copied Message!' : 'Copy Message'}
+                          </button>
+                          <button
+                            onClick={() => copyDraft(`${draft.subject}\n\n${draft.content}`, 'both', expandedDraft || '')}
+                            className="flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+                          >
+                            {copiedDraft === `${expandedDraft}-both` ? 'Copied Both!' : 'Copy Subject + Message'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

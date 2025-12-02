@@ -5,7 +5,17 @@
       "WebFetch(domain:www.googleapis.com)",
       "WebFetch(domain:civicinfo.googleapis.com)",
       "WebFetch(domain:docs.openstates.org)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(psql:*)",
+      "Bash(PGPASSWORD=\"$PGPASSWORD\" psql:*)",
+      "Bash(openssl rand:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
