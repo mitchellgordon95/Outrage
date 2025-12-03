@@ -78,13 +78,13 @@ export default function LoginPage() {
           <Link href="/" className="text-primary hover:underline text-sm mb-4 inline-block">
             ← Back to home
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Sign In</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Sign In</h1>
           <p className="text-gray-600">
             Sign in to create campaigns and generate messages for your representatives.
           </p>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md">
+        <div className="bg-white p-4 md:p-8 rounded-lg shadow-md">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
               <p className="text-red-800 text-sm">{error}</p>

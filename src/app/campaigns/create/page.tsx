@@ -23,7 +23,7 @@ export default async function CreateCampaignPage() {
           <Link href="/" className="text-primary hover:underline text-sm mb-4 inline-block">
             ← Back to home
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Create a Campaign
           </h1>
           <p className="text-gray-600">
@@ -31,7 +31,7 @@ export default async function CreateCampaignPage() {
           </p>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md">
+        <div className="bg-white p-4 md:p-8 rounded-lg shadow-md">
           <CampaignForm />
         </div>
 

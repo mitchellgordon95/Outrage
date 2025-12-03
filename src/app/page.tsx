@@ -640,7 +640,7 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 bg-gray-50">
-      <div className="max-w-4xl w-full p-8">
+      <div className="max-w-4xl w-full p-4 md:p-8">
         {/* Auth Error Modal */}
         {authError && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -666,18 +666,18 @@ export default function Home() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="flex justify-between mb-2">
+          <div className="flex justify-between mb-2 text-xs md:text-sm">
             {session ? (
               <>
                 <button
                   onClick={() => signOut()}
-                  className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+                  className="text-gray-500 hover:text-gray-700 hover:underline"
                 >
                   Sign out
                 </button>
                 <Link
                   href="/campaigns/manage"
-                  className="text-sm text-primary hover:underline font-medium"
+                  className="text-primary hover:underline font-medium"
                 >
                   Manage Campaigns →
                 </Link>
@@ -686,19 +686,19 @@ export default function Home() {
               <div></div>
             )}
           </div>
-          <h1 className="text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>
-          <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>
+          <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto">
             Contact your elected representatives about issues you care about, in just a few minutes.
           </p>
         </div>
 
         {/* Section 1: Address Input */}
-        <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+        <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
           <div className="flex items-center gap-3 mb-4">
             <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
               1
             </span>
-            <h2 className="text-2xl font-semibold text-gray-800">Enter your address</h2>
+            <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Enter your address</h2>
           </div>
 
           {addressSubmitted ? (
@@ -749,12 +749,12 @@ export default function Home() {
 
         {/* Section 2: What's on your mind */}
         {addressSubmitted && (
-          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 2
               </span>
-              <h2 className="text-2xl font-semibold text-gray-800">What's on your mind?</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">What's on your mind?</h2>
             </div>
 
             {messageSubmitted ? (
@@ -844,12 +844,12 @@ export default function Home() {
 
         {/* Section 3: Your Representatives */}
         {messageSubmitted && (
-          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 3
               </span>
-              <h2 className="text-2xl font-semibold text-gray-800">Your Representatives</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Your Representatives</h2>
             </div>
 
             {repsLoading ? (
@@ -1026,12 +1026,12 @@ export default function Home() {
 
         {/* Section 4: Sign In */}
         {messageSubmitted && !repsLoading && representatives.length > 0 && (
-          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 4
               </span>
-              <h2 className="text-2xl font-semibold text-gray-800">Sign In</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Sign In</h2>
             </div>
 
             {session ? (
@@ -1083,12 +1083,12 @@ export default function Home() {
 
         {/* Section 5: Generate Messages (only shows when logged in) */}
         {session && messageSubmitted && !repsLoading && representatives.length > 0 && (
-          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 5
               </span>
-              <h2 className="text-2xl font-semibold text-gray-800">Generate Messages</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Generate Messages</h2>
             </div>
 
             <div className="space-y-4">
@@ -1146,12 +1146,12 @@ export default function Home() {
 
         {/* Section 6: Send Messages (only shows when drafts are generated) */}
         {session && messageSubmitted && !repsLoading && representatives.length > 0 && draftsGenerated && (
-          <div className="bg-white p-8 rounded-lg shadow-md mb-6">
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 6
               </span>
-              <h2 className="text-2xl font-semibold text-gray-800">Your Generated Messages</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Your Generated Messages</h2>
             </div>
 
             <div className="space-y-4">

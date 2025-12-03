@@ -12,7 +12,7 @@ export default function CampaignCard({ campaign, onClick }: CampaignCardProps) {
   return (
     <button
       onClick={() => onClick(campaign)}
-      className="flex-shrink-0 w-64 p-4 bg-white border border-gray-200 rounded-lg hover:border-primary hover:shadow-md transition-all text-left"
+      className="flex-shrink-0 w-48 md:w-64 p-3 md:p-4 bg-white border border-gray-200 rounded-lg hover:border-primary hover:shadow-md transition-all text-left"
     >
       <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
         {campaign.title}

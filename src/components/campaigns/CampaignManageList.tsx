@@ -108,18 +108,18 @@ export default function CampaignManageList() {
       {campaigns.map((campaign) => (
         <div
           key={campaign.id}
-          className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+          className="bg-white p-4 md:p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
         >
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-4">
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-900 mb-1">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">
                 {campaign.title}
               </h3>
               <p className="text-sm text-gray-600 line-clamp-2">
                 {campaign.description}
               </p>
             </div>
-            <div className="ml-4 flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <Link
                 href={`/campaigns/${campaign.id}`}
                 className="text-primary hover:underline text-sm font-medium"
@@ -153,7 +153,7 @@ export default function CampaignManageList() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 text-sm mb-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-6 text-sm mb-4">
             <div>
               <span className="text-gray-500">Messages sent:</span>{' '}
               <span className="font-medium text-gray-900">
@@ -174,7 +174,7 @@ export default function CampaignManageList() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
             <input
               type="text"
               value={`${window.location.origin}/campaigns/${campaign.id}`}
@@ -183,7 +183,7 @@ export default function CampaignManageList() {
             />
             <button
               onClick={() => copyShareableUrl(campaign.id)}
-              className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+              className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-opacity-90 transition-colors whitespace-nowrap"
             >
               {copiedId === campaign.id ? 'Copied!' : 'Copy Link'}
             </button>

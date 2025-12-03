@@ -27,7 +27,7 @@ function CreateCampaignCard() {
   return (
     <button
       onClick={handleClick}
-      className="flex-shrink-0 w-64 p-4 bg-white border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:shadow-md transition-all text-left group"
+      className="flex-shrink-0 w-48 md:w-64 p-3 md:p-4 bg-white border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:shadow-md transition-all text-left group"
     >
       <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-full mb-3 group-hover:bg-gray-200 transition-colors">
         <span className="text-primary text-xl font-bold">+</span>

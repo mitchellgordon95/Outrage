@@ -19,12 +19,12 @@ export default async function ManageCampaignsPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <Link href="/" className="text-primary hover:underline text-sm mb-4 inline-block">
               ← Back to home
             </Link>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
               Your Campaigns
             </h1>
             <p className="text-gray-600">
@@ -33,7 +33,7 @@ export default async function ManageCampaignsPage() {
           </div>
           <Link
             href="/campaigns/create"
-            className="bg-primary text-white py-2 px-6 rounded-lg hover:bg-opacity-90 transition-colors font-medium"
+            className="bg-primary text-white py-2 px-6 rounded-lg hover:bg-opacity-90 transition-colors font-medium text-center md:text-left"
           >
             Create Campaign
           </Link>
