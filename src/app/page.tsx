@@ -115,6 +115,12 @@ export default function Home() {
         setMessageSubmitted(true);
       }
 
+      // Restore personal info
+      const savedPersonalInfo = localStorage.getItem('personalInfo');
+      if (savedPersonalInfo) {
+        setPersonalInfo(savedPersonalInfo);
+      }
+
       // Restore representatives data
       const savedReps = localStorage.getItem('representatives');
       if (savedReps) {
@@ -156,6 +162,7 @@ export default function Home() {
       // If there's an error parsing localStorage, clear it to prevent future issues
       localStorage.removeItem('userAddress');
       localStorage.removeItem('userMessage');
+      localStorage.removeItem('personalInfo');
       localStorage.removeItem('representatives');
       localStorage.removeItem('selectedRepIds');
       localStorage.removeItem('selectionSummary');
@@ -239,6 +246,15 @@ export default function Home() {
   }, []);
 
 
+  // Save personal info to localStorage when it changes
+  useEffect(() => {
+    if (personalInfo) {
+      localStorage.setItem('personalInfo', personalInfo);
+    } else {
+      localStorage.removeItem('personalInfo');
+    }
+  }, [personalInfo]);
+
   // Debounced personal info detection
   useEffect(() => {
     // Cancel previous request if still pending
@@ -317,10 +333,8 @@ export default function Home() {
     setMessage(campaignMessage);
     setShowUndo(true);
 
-    // Optionally increment the campaign view count
-    fetch(`/api/campaigns/${campaign.id}/increment`, {
-      method: 'POST',
-    }).catch(err => console.error('Failed to increment campaign count:', err));
+    // Store campaign ID so we can track when message is actually sent
+    localStorage.setItem('fromCampaign', campaign.id.toString());
   };
 
   const handleUndo = () => {
@@ -328,6 +342,7 @@ export default function Home() {
     setPreviousMessage('');
     setSelectedCampaign(null);
     setShowUndo(false);
+    localStorage.removeItem('fromCampaign');
   };
 
   const handleMessageSubmit = async (e: React.FormEvent) => {
@@ -1097,28 +1112,12 @@ export default function Home() {
 
                 return (
                   <div className="space-y-6">
-                    {/* Contact Information */}
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Contact Information</h4>
-                      <div className="space-y-2">
-                        {selectedRep.contacts.map((contact, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <span className="text-base flex-shrink-0">{getContactIcon(contact.type)}</span>
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs text-gray-500 uppercase block">{contact.type}</span>
-                                <p className="text-sm text-gray-900 truncate">{contact.value}</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => copyToClipboard(contact.value, `${expandedDraft}-contact-${idx}`)}
-                              className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
-                            >
-                              {copiedContact === `${expandedDraft}-contact-${idx}` ? 'Copied!' : 'Copy'}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                    {/* Representative Info */}
+                    <div className="pb-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">{selectedRep.office}</h3>
+                      {selectedRep.party && (
+                        <p className="text-sm text-gray-600 mt-1">{selectedRep.party}</p>
+                      )}
                     </div>
 
                     {/* Generated Message */}
@@ -1128,16 +1127,8 @@ export default function Home() {
                       {/* Subject */}
                       <div className="mb-4">
                         <label className="text-xs text-gray-500 uppercase mb-2 block">Subject</label>
-                        <div className="flex gap-2">
-                          <div className="flex-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <p className="text-sm text-gray-900">{draft.subject}</p>
-                          </div>
-                          <button
-                            onClick={() => copyDraft(draft.subject, 'subject', expandedDraft || '')}
-                            className="px-3 py-2 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
-                          >
-                            {copiedDraft === `${expandedDraft}-subject` ? '✓' : 'Copy'}
-                          </button>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-sm text-gray-900">{draft.subject}</p>
                         </div>
                       </div>
 
@@ -1161,6 +1152,74 @@ export default function Home() {
                             {copiedDraft === `${expandedDraft}-both` ? 'Copied Both!' : 'Copy Subject + Message'}
                           </button>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Contact Methods</h4>
+                      <div className="space-y-2">
+                        {selectedRep.contacts.map((contact, idx) => {
+                          const contactType = contact.type.toLowerCase();
+                          const isEmail = contactType === 'email';
+                          const isWebform = contactType === 'webform' || contactType === 'web form';
+
+                          return (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="text-base flex-shrink-0">{getContactIcon(contact.type)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs text-gray-500 uppercase block">{contact.type}</span>
+                                  <p className="text-sm text-gray-900 truncate">{contact.value}</p>
+                                </div>
+                              </div>
+                              {isEmail ? (
+                                <a
+                                  href={`mailto:${contact.value}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.content)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => {
+                                    // Track message sent if this came from a campaign
+                                    const fromCampaignId = localStorage.getItem('fromCampaign');
+                                    if (fromCampaignId) {
+                                      fetch(`/api/campaigns/${fromCampaignId}/increment`, {
+                                        method: 'POST',
+                                      }).catch(err => console.error('Failed to increment campaign count:', err));
+                                    }
+                                  }}
+                                  className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                >
+                                  Send Email
+                                </a>
+                              ) : isWebform ? (
+                                <a
+                                  href={contact.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => {
+                                    // Track message sent if this came from a campaign
+                                    const fromCampaignId = localStorage.getItem('fromCampaign');
+                                    if (fromCampaignId) {
+                                      fetch(`/api/campaigns/${fromCampaignId}/increment`, {
+                                        method: 'POST',
+                                      }).catch(err => console.error('Failed to increment campaign count:', err));
+                                    }
+                                  }}
+                                  className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                >
+                                  Open Form
+                                </a>
+                              ) : (
+                                <button
+                                  onClick={() => copyToClipboard(contact.value, `${expandedDraft}-contact-${idx}`)}
+                                  className="ml-2 px-3 py-1 text-xs bg-primary text-white rounded hover:bg-opacity-90 transition-colors flex-shrink-0"
+                                >
+                                  {copiedContact === `${expandedDraft}-contact-${idx}` ? 'Copied!' : 'Copy'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
