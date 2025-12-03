@@ -207,7 +207,7 @@ async function isNotEmailDraft(responseText: string): Promise<boolean> {
   
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022', // Using Sonnet for more accurate classification
+      model: process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229',
       max_tokens: 10,
       system: "You are a classifier that determines if text is an actual email draft or not. If the text is questioning, correcting, or asking for clarification instead of providing the requested email, it's not an email. Respond with only 'EMAIL' or 'NOT_EMAIL'.",
       messages: [
