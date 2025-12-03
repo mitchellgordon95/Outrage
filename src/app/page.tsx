@@ -7,6 +7,7 @@ import CampaignCarousel from '@/components/campaigns/CampaignCarousel';
 import { Campaign } from '@/types/campaign';
 import Link from 'next/link';
 import Autocomplete from 'react-google-autocomplete';
+import MarkdownContent from '@/components/MarkdownContent';
 
 interface Representative {
   id?: string;
@@ -453,6 +454,16 @@ export default function Home() {
     });
   };
 
+  const handleSelectAll = () => {
+    setUserSelectedRepIds(selectedRepIds);
+    localStorage.setItem('userSelectedRepIds', JSON.stringify(selectedRepIds));
+  };
+
+  const handleSelectNone = () => {
+    setUserSelectedRepIds([]);
+    localStorage.setItem('userSelectedRepIds', JSON.stringify([]));
+  };
+
   const copyToClipboard = async (text: string, contactKey: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -683,7 +694,9 @@ export default function Home() {
 
             {messageSubmitted ? (
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-green-800 whitespace-pre-wrap">{message}</p>
+                <div className="text-green-800">
+                  <MarkdownContent content={message} className="prose-green" />
+                </div>
                 <button
                   onClick={() => setMessageSubmitted(false)}
                   className="text-primary underline text-sm mt-2"
@@ -777,6 +790,21 @@ export default function Home() {
                     Cicero
                   </a>
                 </p>
+
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={handleSelectNone}
+                    className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Select None
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {representatives

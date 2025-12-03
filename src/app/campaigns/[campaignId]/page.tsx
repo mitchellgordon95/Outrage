@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Campaign } from '@/types/campaign';
 import Autocomplete from 'react-google-autocomplete';
+import MarkdownContent from '@/components/MarkdownContent';
 
 export default function CampaignPage() {
   const params = useParams();
@@ -119,12 +120,15 @@ export default function CampaignPage() {
           </div>
 
           <div className="mb-6">
-            <p className="text-gray-700 text-lg whitespace-pre-wrap">
-              {campaign.message && campaign.message.length > 300 && !isExpanded
-                ? campaign.message.substring(0, 300) + '...'
-                : campaign.message}
-            </p>
-            {campaign.message && campaign.message.length > 300 && (
+            <div className="text-gray-700 text-lg">
+              <MarkdownContent
+                content={campaign.message && campaign.message.length > 1000 && !isExpanded
+                  ? campaign.message.substring(0, 1000) + '...'
+                  : campaign.message || ''}
+                className="prose-gray"
+              />
+            </div>
+            {campaign.message && campaign.message.length > 1000 && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="mt-2 text-primary hover:underline text-sm font-medium"

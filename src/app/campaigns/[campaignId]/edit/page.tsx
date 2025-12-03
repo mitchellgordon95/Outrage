@@ -188,7 +188,8 @@ export default function EditCampaignPage() {
                 disabled={submitting}
               />
               <p className="text-xs text-gray-500 mt-1">
-                This is the issue or message people will use when they join your campaign
+                This is the issue or message people will use when they join your campaign.
+                Markdown is supported (**bold**, *italic*, headers, lists, links, code, blockquotes).
               </p>
             </div>
 
