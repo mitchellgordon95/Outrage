@@ -135,3 +135,60 @@ export async function PUT(
     );
   }
 }
+
+// DELETE /api/campaigns/[campaignId] - Delete campaign (owner only)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { campaignId: string } }
+) {
+  try {
+    // Check authentication
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const campaignId = parseInt(params.campaignId);
+
+    if (isNaN(campaignId)) {
+      return NextResponse.json(
+        { error: 'Invalid campaign ID' },
+        { status: 400 }
+      );
+    }
+
+    // Check ownership
+    const ownerCheck = await pool.query(
+      'SELECT user_id FROM campaigns WHERE id = $1',
+      [campaignId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
+    if (ownerCheck.rows[0].user_id !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Not authorized to delete this campaign' },
+        { status: 403 }
+      );
+    }
+
+    // Delete the campaign
+    await pool.query('DELETE FROM campaigns WHERE id = $1', [campaignId]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting campaign:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete campaign' },
+      { status: 500 }
+    );
+  }
+}

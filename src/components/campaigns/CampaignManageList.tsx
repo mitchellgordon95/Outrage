@@ -9,6 +9,8 @@ export default function CampaignManageList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -40,6 +42,28 @@ export default function CampaignManageList() {
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Failed to copy URL:', err);
+    }
+  };
+
+  const deleteCampaign = async (campaignId: number) => {
+    setDeletingId(campaignId);
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete campaign');
+      }
+
+      // Remove from local state
+      setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+      setConfirmDeleteId(null);
+    } catch (err) {
+      console.error('Failed to delete campaign:', err);
+      setError('Failed to delete campaign');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -95,12 +119,38 @@ export default function CampaignManageList() {
                 {campaign.description}
               </p>
             </div>
-            <Link
-              href={`/campaigns/${campaign.id}`}
-              className="ml-4 text-primary hover:underline text-sm font-medium"
-            >
-              View
-            </Link>
+            <div className="ml-4 flex items-center gap-3">
+              <Link
+                href={`/campaigns/${campaign.id}`}
+                className="text-primary hover:underline text-sm font-medium"
+              >
+                View
+              </Link>
+              {confirmDeleteId === campaign.id ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => deleteCampaign(campaign.id)}
+                    disabled={deletingId === campaign.id}
+                    className="text-sm text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                  >
+                    {deletingId === campaign.id ? 'Deleting...' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteId(campaign.id)}
+                  className="text-sm text-gray-400 hover:text-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-6 text-sm mb-4">
