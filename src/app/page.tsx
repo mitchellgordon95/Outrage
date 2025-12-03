@@ -315,9 +315,51 @@ export default function Home() {
     };
   }, [personalInfo]);
 
+  const resetDownstreamState = () => {
+    // Reset Section 2: Message
+    setMessage('');
+    setMessageSubmitted(false);
+    setPreviousMessage('');
+    setShowUndo(false);
+    setSelectedCampaign(null);
+
+    // Reset Section 3: Representatives
+    setRepresentatives([]);
+    setSelectedRepIds([]);
+    setUserSelectedRepIds([]);
+    setSelectionSummary('');
+    setExplanations({});
+    setExpandedRep(null);
+    setRepsError(null);
+
+    // Reset Section 5: Generate Messages
+    setGeneratedDrafts({});
+    setGeneratingDrafts(false);
+    setGenerationError(null);
+    setDraftsGenerated(false);
+
+    // Reset Section 6: Send Messages
+    setExpandedDraft(null);
+
+    // Clear localStorage for downstream data
+    localStorage.removeItem('userMessage');
+    localStorage.removeItem('representatives');
+    localStorage.removeItem('selectedRepIds');
+    localStorage.removeItem('userSelectedRepIds');
+    localStorage.removeItem('selectionSummary');
+    localStorage.removeItem('explanations');
+    localStorage.removeItem('fromCampaign');
+  };
+
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!address) return;
+
+    // Check if address actually changed
+    const previousAddress = localStorage.getItem('userAddress');
+    if (previousAddress && previousAddress !== address) {
+      resetDownstreamState();
+    }
 
     localStorage.setItem('userAddress', address);
     setAddressSubmitted(true);
