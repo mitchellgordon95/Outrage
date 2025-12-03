@@ -561,7 +561,7 @@ export default function Home() {
     setExpandedDraft(prev => prev === repId ? null : repId);
   };
 
-  const copyDraft = async (text: string, type: 'subject' | 'content', repId: string) => {
+  const copyDraft = async (text: string, type: 'subject' | 'content' | 'both', repId: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedDraft(`${repId}-${type}`);
@@ -653,7 +653,7 @@ export default function Home() {
                   types: ['address']
                 }}
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="123 Main St, City, State"
                 required
