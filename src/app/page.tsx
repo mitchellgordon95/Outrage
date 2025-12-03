@@ -45,10 +45,10 @@ export default function Home() {
   const [userSelectedRepIds, setUserSelectedRepIds] = useState<string[]>([]); // User-checked reps
   const [selectionSummary, setSelectionSummary] = useState<string>('');
   const [explanations, setExplanations] = useState<Record<string, string>>({});
-  const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [repsLoading, setRepsLoading] = useState(false);
   const [repsError, setRepsError] = useState<string | null>(null);
+  const [expandedRep, setExpandedRep] = useState<string | null>(null);
 
   // Section 4: Sign In
   const [signInEmail, setSignInEmail] = useState('');
@@ -432,18 +432,6 @@ export default function Home() {
     }
   };
 
-  const toggleExplanation = (repId: string) => {
-    setExpandedExplanations(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(repId)) {
-        newSet.delete(repId);
-      } else {
-        newSet.add(repId);
-      }
-      return newSet;
-    });
-  };
-
   const toggleRepSelection = (repId: string) => {
     setUserSelectedRepIds(prev => {
       const newIds = prev.includes(repId)
@@ -806,96 +794,124 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Representative badges */}
+                <div className="flex flex-wrap gap-2 mb-6">
                   {representatives
                     .filter(rep => rep.id && selectedRepIds.includes(rep.id))
                     .map((rep) => {
-                      const isChecked = userSelectedRepIds.includes(rep.id || '');
+                      const repId = rep.id || '';
+                      const isSelected = userSelectedRepIds.includes(repId);
+                      const isExpanded = expandedRep === repId;
                       return (
-                        <div
-                          key={rep.id}
-                          className={`border rounded-lg p-3 transition-all ${
-                            isChecked
+                        <button
+                          key={repId}
+                          onClick={() => setExpandedRep(isExpanded ? null : repId)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 transition-all ${
+                            isExpanded
+                              ? `border-current ${getLevelColor(rep.level)}`
+                              : isSelected
                               ? 'border-primary bg-blue-50'
-                              : 'border-gray-200 bg-white opacity-60'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                           }`}
                         >
-                          <div className="flex items-start gap-2">
-                            {/* Checkbox */}
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleRepSelection(rep.id || '')}
-                              className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer flex-shrink-0"
+                          {rep.photoUrl && (
+                            <img
+                              src={rep.photoUrl}
+                              alt={rep.name}
+                              className="w-6 h-6 rounded-full object-cover"
                             />
-
-                            {rep.photoUrl && (
-                              <img
-                                src={rep.photoUrl}
-                                alt={rep.name}
-                                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start gap-2 mb-0.5">
-                                <h3 className="font-semibold text-base text-gray-900 flex-1">{rep.name}</h3>
-                                <span className={`px-1.5 py-0.5 text-xs font-medium rounded border flex-shrink-0 ${getLevelColor(rep.level)}`}>
-                                  {getLevelLabel(rep.level)}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-600">{rep.office}</p>
-                              {rep.party && (
-                                <p className="text-xs text-gray-500">{rep.party}</p>
-                              )}
-
-                              {/* Contact methods */}
-                              <div className="flex gap-1.5 mt-1.5">
-                                {rep.contacts.slice(0, 3).map((contact, idx) => {
-                                  const contactKey = `${rep.id}-${idx}`;
-                                  const isCopied = copiedContact === contactKey;
-                                  return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => copyToClipboard(contact.value, contactKey)}
-                                      className="text-base hover:scale-110 transition-transform cursor-pointer relative group"
-                                      title={`Click to copy ${contact.type}`}
-                                    >
-                                      {getContactIcon(contact.type)}
-                                      {isCopied && (
-                                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
-                                          Copied!
-                                        </span>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* AI Explanation */}
-                          {rep.id && explanations[rep.id] && (
-                            <div className="mt-2 pt-2 border-t border-gray-200">
-                              <button
-                                onClick={() => toggleExplanation(rep.id!)}
-                                className="w-full text-left flex items-center justify-between hover:text-primary transition-colors"
-                              >
-                                <p className="text-xs font-medium text-gray-500">
-                                  {expandedExplanations.has(rep.id) ? 'Hide reasoning' : 'Why selected?'}
-                                </p>
-                                <span className="text-gray-400 text-xs">
-                                  {expandedExplanations.has(rep.id) ? '▼' : '▶'}
-                                </span>
-                              </button>
-                              {expandedExplanations.has(rep.id) && (
-                                <p className="text-xs text-gray-700 mt-1.5">{explanations[rep.id]}</p>
-                              )}
-                            </div>
                           )}
-                        </div>
+                          <span className={`text-sm font-medium ${isExpanded ? '' : isSelected ? 'text-gray-900' : 'text-gray-600'}`}>
+                            {rep.name}
+                          </span>
+                          {isSelected && (
+                            <span className="text-green-600 text-sm">✓</span>
+                          )}
+                        </button>
                       );
                     })}
                 </div>
+
+                {/* Expanded representative details */}
+                {(() => {
+                  const selectedRep = representatives.find(rep => rep.id === expandedRep);
+                  if (!selectedRep) return null;
+
+                  const isChecked = userSelectedRepIds.includes(expandedRep || '');
+
+                  return (
+                    <div className="space-y-6 border-t border-gray-200 pt-6">
+                      {/* Representative header with selection toggle */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          {selectedRep.photoUrl && (
+                            <img
+                              src={selectedRep.photoUrl}
+                              alt={selectedRep.name}
+                              className="w-16 h-16 rounded-full object-cover"
+                            />
+                          )}
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-xl font-semibold text-gray-900">{selectedRep.name}</h3>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getLevelColor(selectedRep.level)}`}>
+                                {getLevelLabel(selectedRep.level)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{selectedRep.office}</p>
+                            {selectedRep.party && (
+                              <p className="text-sm text-gray-500">{selectedRep.party}</p>
+                            )}
+
+                            {/* Contact icons */}
+                            <div className="flex gap-2 mt-2">
+                              {selectedRep.contacts.slice(0, 3).map((contact, idx) => {
+                                const contactKey = `${expandedRep}-${idx}`;
+                                const isCopied = copiedContact === contactKey;
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => copyToClipboard(contact.value, contactKey)}
+                                    className="text-xl hover:scale-110 transition-transform cursor-pointer relative group"
+                                    title={`Click to copy ${contact.type}`}
+                                  >
+                                    {getContactIcon(contact.type)}
+                                    {isCopied && (
+                                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                                        Copied!
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRepSelection(expandedRep || '');
+                          }}
+                          className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+                            isChecked
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          {isChecked ? '✓ Selected' : 'Select'}
+                        </button>
+                      </div>
+
+                      {/* AI Explanation */}
+                      {expandedRep && explanations[expandedRep] && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-xs font-semibold text-blue-900 mb-1 uppercase">Why AI selected this representative</p>
+                          <p className="text-sm text-blue-800">{explanations[expandedRep]}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-center text-gray-500 bg-gray-50 p-4 rounded-md border border-gray-200">
