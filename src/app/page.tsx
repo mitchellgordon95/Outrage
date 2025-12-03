@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import PersonalInfoCheckboxes from '@/components/PersonalInfoCheckboxes';
+import CampaignCarousel from '@/components/campaigns/CampaignCarousel';
+import { Campaign } from '@/types/campaign';
+import Link from 'next/link';
 
 // Import from our custom type definition
 /// <reference path="../types/globals.d.ts" />
@@ -37,6 +40,9 @@ export default function Home() {
   // Section 2: What's on your mind
   const [message, setMessage] = useState('');
   const [messageSubmitted, setMessageSubmitted] = useState(false);
+  const [previousMessage, setPreviousMessage] = useState('');
+  const [showUndo, setShowUndo] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
   // Section 3: Representatives
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
@@ -162,6 +168,81 @@ export default function Home() {
     }
   }, []);
 
+  // Handle campaign URL flow - when user comes from a campaign page
+  useEffect(() => {
+    try {
+      const fromCampaign = localStorage.getItem('fromCampaign');
+      if (fromCampaign) {
+        // Clear the flag
+        localStorage.removeItem('fromCampaign');
+
+        // If we have both address and message (set by campaign page), scroll to Section 3
+        const savedAddress = localStorage.getItem('userAddress');
+        const savedMessage = localStorage.getItem('userMessage');
+
+        if (savedAddress && savedMessage) {
+          // Trigger the message submit to fetch representatives
+          setAddressSubmitted(true);
+          setMessageSubmitted(true);
+
+          // Auto-submit to load representatives
+          setTimeout(async () => {
+            try {
+              setRepsLoading(true);
+              setRepsError(null);
+
+              const lookupResponse = await fetch('/api/lookup-representatives', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: savedAddress })
+              });
+
+              if (!lookupResponse.ok) {
+                throw new Error('Failed to lookup representatives');
+              }
+
+              const { representatives: reps } = await lookupResponse.json();
+              setRepresentatives(reps);
+
+              const selectResponse = await fetch('/api/select-representatives', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  demands: [savedMessage],
+                  representatives: reps
+                })
+              });
+
+              if (!selectResponse.ok) {
+                throw new Error('Failed to select representatives');
+              }
+
+              const { selectedIds, summary, explanations: repExplanations } = await selectResponse.json();
+              setSelectedRepIds(selectedIds);
+              setUserSelectedRepIds(selectedIds);
+              setSelectionSummary(summary || '');
+              setExplanations(repExplanations || {});
+
+              localStorage.setItem('representatives', JSON.stringify(reps));
+              localStorage.setItem('selectedRepIds', JSON.stringify(selectedIds));
+              localStorage.setItem('userSelectedRepIds', JSON.stringify(selectedIds));
+              localStorage.setItem('selectionSummary', summary || '');
+              localStorage.setItem('explanations', JSON.stringify(repExplanations || {}));
+
+            } catch (error) {
+              console.error('Error fetching representatives:', error);
+              setRepsError('Failed to load representatives. Please try again.');
+            } finally {
+              setRepsLoading(false);
+            }
+          }, 100);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to handle campaign flow:', error);
+    }
+  }, []);
+
   // Load Google Maps on mount
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -277,6 +358,29 @@ export default function Home() {
 
     localStorage.setItem('userAddress', address);
     setAddressSubmitted(true);
+  };
+
+  const handleCampaignSelect = (campaign: Campaign) => {
+    // Save current message before replacing it
+    setPreviousMessage(message);
+    setSelectedCampaign(campaign);
+
+    // Update message with campaign message
+    const campaignMessage = campaign.message || campaign.description || '';
+    setMessage(campaignMessage);
+    setShowUndo(true);
+
+    // Optionally increment the campaign view count
+    fetch(`/api/campaigns/${campaign.id}/increment`, {
+      method: 'POST',
+    }).catch(err => console.error('Failed to increment campaign count:', err));
+  };
+
+  const handleUndo = () => {
+    setMessage(previousMessage);
+    setPreviousMessage('');
+    setSelectedCampaign(null);
+    setShowUndo(false);
   };
 
   const handleMessageSubmit = async (e: React.FormEvent) => {
@@ -550,6 +654,16 @@ export default function Home() {
 
         {/* Header */}
         <div className="text-center mb-12">
+          <div className="flex justify-end mb-2">
+            {session && (
+              <Link
+                href="/campaigns/manage"
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                Manage Campaigns →
+              </Link>
+            )}
+          </div>
           <h1 className="text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>
           <p className="text-xl text-gray-700 max-w-2xl mx-auto">
             Contact your elected representatives about issues you care about, in just a few minutes.
@@ -635,13 +749,34 @@ export default function Home() {
                   Tell us what issues you want to address with your representatives.
                 </p>
 
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary min-h-[150px]"
-                  placeholder="Write about the issues that matter to you..."
-                  required
-                />
+                <div className="space-y-2">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                    placeholder="Write about the issues that matter to you..."
+                    required
+                  />
+
+                  {showUndo && (
+                    <button
+                      type="button"
+                      onClick={handleUndo}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      ← Undo (restore previous message)
+                    </button>
+                  )}
+                </div>
+
+                {/* Campaign Carousel */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Or join a campaign:</h3>
+                  <CampaignCarousel
+                    userMessage={message}
+                    onCampaignSelect={handleCampaignSelect}
+                  />
+                </div>
 
                 <button
                   type="submit"
