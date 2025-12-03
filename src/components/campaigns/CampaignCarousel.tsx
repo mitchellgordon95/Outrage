@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Campaign } from '@/types/campaign';
 import CampaignCard from './CampaignCard';
 import Link from 'next/link';
@@ -8,6 +10,36 @@ import Link from 'next/link';
 interface CampaignCarouselProps {
   userMessage: string;
   onCampaignSelect?: (campaign: Campaign) => void;
+}
+
+function CreateCampaignCard() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleClick = () => {
+    if (session) {
+      router.push('/campaigns/create');
+    } else {
+      router.push('/login?redirect=/campaigns/create');
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex-shrink-0 w-64 p-4 bg-white border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:shadow-md transition-all text-left group"
+    >
+      <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-full mb-3 group-hover:bg-gray-200 transition-colors">
+        <span className="text-primary text-xl font-bold">+</span>
+      </div>
+      <h3 className="font-semibold text-gray-900 mb-2">
+        Create Your Own Campaign
+      </h3>
+      <p className="text-sm text-gray-600">
+        Start a movement around an issue you care about
+      </p>
+    </button>
+  );
 }
 
 export default function CampaignCarousel({ userMessage, onCampaignSelect }: CampaignCarouselProps) {
@@ -71,14 +103,8 @@ export default function CampaignCarousel({ userMessage, onCampaignSelect }: Camp
 
   if (campaigns.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 text-sm mb-2">No campaigns found</p>
-        <Link
-          href="/campaigns/create"
-          className="text-primary hover:underline text-sm font-medium"
-        >
-          Be the first to create one!
-        </Link>
+      <div className="flex justify-center py-4">
+        <CreateCampaignCard />
       </div>
     );
   }
@@ -94,11 +120,12 @@ export default function CampaignCarousel({ userMessage, onCampaignSelect }: Camp
               onClick={(c) => onCampaignSelect?.(c)}
             />
           ))}
+          <CreateCampaignCard />
         </div>
       </div>
 
       {/* Scroll hint */}
-      {campaigns.length > 3 && (
+      {campaigns.length >= 3 && (
         <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none" />
       )}
     </div>

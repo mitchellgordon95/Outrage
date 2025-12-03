@@ -13,7 +13,7 @@ export default async function CreateCampaignPage() {
   const session = await auth();
 
   if (!session) {
-    redirect('/?error=auth_required');
+    redirect('/login?redirect=/campaigns/create');
   }
 
   return (

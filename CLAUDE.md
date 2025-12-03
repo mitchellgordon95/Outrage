@@ -48,7 +48,7 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 
 # Authentication (Auth.js v5)
 AUTH_SECRET=your_auth_secret  # Generate with: openssl rand -base64 32
-AUTH_URL=http://localhost:3000  # Set to production URL in Vercel
+AUTH_URL=http://localhost:3456  # Set to production URL in Vercel
 RESEND_API_KEY=your_resend_api_key  # For magic link emails
 
 # Database

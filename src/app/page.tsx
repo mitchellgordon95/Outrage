@@ -656,14 +656,24 @@ export default function Home() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="flex justify-end mb-2">
-            {session && (
-              <Link
-                href="/campaigns/manage"
-                className="text-sm text-primary hover:underline font-medium"
-              >
-                Manage Campaigns →
-              </Link>
+          <div className="flex justify-between mb-2">
+            {session ? (
+              <>
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+                >
+                  Sign out
+                </button>
+                <Link
+                  href="/campaigns/manage"
+                  className="text-sm text-primary hover:underline font-medium"
+                >
+                  Manage Campaigns →
+                </Link>
+              </>
+            ) : (
+              <div></div>
             )}
           </div>
           <h1 className="text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>

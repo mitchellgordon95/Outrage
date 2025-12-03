@@ -79,7 +79,7 @@ Outrage is a web application that empowers citizens to quickly and effectively c
    ```bash
    npm run dev
    ```
-   Open [http://localhost:3000](http://localhost:3000) to see the application
+   Open [http://localhost:3456](http://localhost:3456) to see the application
 
 ### Environment Variables
 
