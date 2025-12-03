@@ -115,6 +115,12 @@ export default function Home() {
         setMessageSubmitted(true);
       }
 
+      // Restore selected campaign
+      const savedCampaign = localStorage.getItem('selectedCampaign');
+      if (savedCampaign) {
+        setSelectedCampaign(JSON.parse(savedCampaign));
+      }
+
       // Restore personal info
       const savedPersonalInfo = localStorage.getItem('personalInfo');
       if (savedPersonalInfo) {
@@ -343,6 +349,7 @@ export default function Home() {
 
     // Clear localStorage for downstream data
     localStorage.removeItem('userMessage');
+    localStorage.removeItem('selectedCampaign');
     localStorage.removeItem('representatives');
     localStorage.removeItem('selectedRepIds');
     localStorage.removeItem('userSelectedRepIds');
@@ -375,6 +382,8 @@ export default function Home() {
     setMessage(campaignMessage);
     setShowUndo(true);
 
+    // Store campaign so we can restore it on page reload
+    localStorage.setItem('selectedCampaign', JSON.stringify(campaign));
     // Store campaign ID so we can track when message is actually sent
     localStorage.setItem('fromCampaign', campaign.id.toString());
   };
@@ -384,6 +393,7 @@ export default function Home() {
     setPreviousMessage('');
     setSelectedCampaign(null);
     setShowUndo(false);
+    localStorage.removeItem('selectedCampaign');
     localStorage.removeItem('fromCampaign');
   };
 
@@ -749,6 +759,19 @@ export default function Home() {
 
             {messageSubmitted ? (
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                {selectedCampaign && (
+                  <div className="flex items-center gap-2 text-sm mb-3 pb-3 border-b border-green-200">
+                    <span className="text-green-700">Using campaign:</span>
+                    <Link
+                      href={`/campaigns/${selectedCampaign.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {selectedCampaign.title}
+                    </Link>
+                  </div>
+                )}
                 <div className="text-green-800">
                   <MarkdownContent content={message} className="prose-green" />
                 </div>
@@ -768,7 +791,20 @@ export default function Home() {
                 <div className="space-y-2">
                   <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      const newMessage = e.target.value;
+                      setMessage(newMessage);
+                      // If message is edited away from campaign message, deselect campaign
+                      if (selectedCampaign) {
+                        const campaignMessage = selectedCampaign.message || selectedCampaign.description || '';
+                        if (newMessage !== campaignMessage) {
+                          setSelectedCampaign(null);
+                          setShowUndo(false);
+                          localStorage.removeItem('selectedCampaign');
+                          localStorage.removeItem('fromCampaign');
+                        }
+                      }
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
                     placeholder="Write about the issues that matter to you..."
                     required
