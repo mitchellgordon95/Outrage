@@ -6,9 +6,7 @@ import PersonalInfoCheckboxes from '@/components/PersonalInfoCheckboxes';
 import CampaignCarousel from '@/components/campaigns/CampaignCarousel';
 import { Campaign } from '@/types/campaign';
 import Link from 'next/link';
-
-// Import from our custom type definition
-/// <reference path="../types/globals.d.ts" />
+import Autocomplete from 'react-google-autocomplete';
 
 interface Representative {
   id?: string;
@@ -27,15 +25,11 @@ interface Contact {
 }
 
 export default function Home() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const { data: session, status } = useSession();
 
   // Section 1: Address
   const [address, setAddress] = useState('');
   const [addressSubmitted, setAddressSubmitted] = useState(false);
-  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
-  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   // Section 2: What's on your mind
   const [message, setMessage] = useState('');
@@ -243,35 +237,6 @@ export default function Home() {
     }
   }, []);
 
-  // Load Google Maps on mount
-  useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-    if (!apiKey) {
-      console.error('Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file.');
-      setApiKeyMissing(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      setGoogleMapsLoaded(true);
-      initAutocomplete();
-    };
-    script.onerror = () => {
-      console.error('Failed to load Google Maps API script. Check your API key.');
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
 
   // Debounced personal info detection
   useEffect(() => {
@@ -332,25 +297,6 @@ export default function Home() {
       abortController.abort();
     };
   }, [personalInfo]);
-
-  const initAutocomplete = () => {
-    if (!inputRef.current || !window.google) return;
-
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      componentRestrictions: { country: 'us' },
-      fields: ['address_components', 'formatted_address', 'geometry'],
-      types: ['address']
-    });
-
-    autocompleteRef.current = autocomplete;
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (place && place.formatted_address) {
-        setAddress(place.formatted_address);
-      }
-    });
-  };
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -679,14 +625,7 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-gray-800">Enter your address</h2>
           </div>
 
-          {apiKeyMissing ? (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-              <h3 className="text-lg font-semibold text-red-600 mb-2">API Key Missing</h3>
-              <p className="text-red-700">
-                The Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file.
-              </p>
-            </div>
-          ) : addressSubmitted ? (
+          {addressSubmitted ? (
             <div className="p-4 bg-green-50 border border-green-200 rounded-md">
               <p className="text-green-800 font-medium">{address}</p>
               <button
@@ -702,9 +641,18 @@ export default function Home() {
                 We'll use this to find your elected representatives.
               </p>
 
-              <input
-                ref={inputRef}
-                type="text"
+              <Autocomplete
+                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+                onPlaceSelected={(place) => {
+                  if (place && place.formatted_address) {
+                    setAddress(place.formatted_address);
+                  }
+                }}
+                options={{
+                  componentRestrictions: { country: 'us' },
+                  fields: ['address_components', 'formatted_address', 'geometry'],
+                  types: ['address']
+                }}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"

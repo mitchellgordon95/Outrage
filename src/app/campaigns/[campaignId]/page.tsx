@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Campaign } from '@/types/campaign';
+import Autocomplete from 'react-google-autocomplete';
 
 export default function CampaignPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
+
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,9 +169,18 @@ export default function CampaignPage() {
               <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
                 Your Address
               </label>
-              <input
-                type="text"
-                id="address"
+              <Autocomplete
+                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+                onPlaceSelected={(place) => {
+                  if (place && place.formatted_address) {
+                    setAddress(place.formatted_address);
+                  }
+                }}
+                options={{
+                  componentRestrictions: { country: 'us' },
+                  fields: ['address_components', 'formatted_address', 'geometry'],
+                  types: ['address']
+                }}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
