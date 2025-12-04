@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Run content moderation
     const moderationResponse = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3456'}/api/campaigns/moderate`,
+      `${process.env.AUTH_URL || 'http://localhost:3456'}/api/campaigns/moderate`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
