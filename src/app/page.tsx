@@ -683,7 +683,12 @@ export default function Home() {
                 </Link>
               </>
             ) : (
-              <div></div>
+              <Link
+                href="/login"
+                className="text-primary hover:underline font-medium ml-auto"
+              >
+                Sign in →
+              </Link>
             )}
           </div>
           <h1 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">Outrage!!</h1>
