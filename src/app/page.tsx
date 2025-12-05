@@ -50,13 +50,13 @@ export default function Home() {
   const [repsError, setRepsError] = useState<string | null>(null);
   const [expandedRep, setExpandedRep] = useState<string | null>(null);
 
-  // Section 4: Sign In
+  // Section 6: Sign In (for campaign management)
   const [signInEmail, setSignInEmail] = useState('');
   const [signInLoading, setSignInLoading] = useState(false);
   const [signInSuccess, setSignInSuccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Section 5: Generate Messages
+  // Section 4: Generate Messages
   const [personalInfo, setPersonalInfo] = useState('');
   const [generatedDrafts, setGeneratedDrafts] = useState<Record<string, { subject: string; content: string }>>({});
   const [generatingDrafts, setGeneratingDrafts] = useState(false);
@@ -338,13 +338,13 @@ export default function Home() {
     setExpandedRep(null);
     setRepsError(null);
 
-    // Reset Section 5: Generate Messages
+    // Reset Section 4: Generate Messages
     setGeneratedDrafts({});
     setGeneratingDrafts(false);
     setGenerationError(null);
     setDraftsGenerated(false);
 
-    // Reset Section 6: Send Messages
+    // Reset Section 5: Send Messages
     setExpandedDraft(null);
 
     // Clear localStorage for downstream data
@@ -1029,69 +1029,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* Section 4: Sign In */}
+        {/* Section 4: Generate Messages */}
         {messageSubmitted && !repsLoading && representatives.length > 0 && (
           <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 4
-              </span>
-              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Sign In</h2>
-            </div>
-
-            {session ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-green-800 font-medium">Signed in as {session.user?.email}</p>
-                </div>
-                <button
-                  onClick={() => signOut()}
-                  className="text-primary underline text-sm"
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : signInSuccess ? (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-blue-800 font-medium">Check your email!</p>
-                <p className="text-blue-700 text-sm mt-2">
-                  We sent you a magic link to sign in. Click the link in your email to continue.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <p className="text-gray-600 text-sm">
-                  Login to generate copy-pastable messages and manage campaigns!
-                </p>
-
-                <input
-                  type="email"
-                  value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="your.email@example.com"
-                  required
-                  disabled={signInLoading}
-                />
-
-                <button
-                  type="submit"
-                  className="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium disabled:opacity-50"
-                  disabled={!signInEmail || signInLoading}
-                >
-                  {signInLoading ? 'Sending magic link...' : 'Sign in with email'}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* Section 5: Generate Messages (only shows when logged in) */}
-        {session && messageSubmitted && !repsLoading && representatives.length > 0 && (
-          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                5
               </span>
               <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Generate Messages</h2>
             </div>
@@ -1149,12 +1092,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* Section 6: Send Messages (only shows when drafts are generated) */}
-        {session && messageSubmitted && !repsLoading && representatives.length > 0 && draftsGenerated && (
+        {/* Section 5: Send Messages (only shows when drafts are generated) */}
+        {messageSubmitted && !repsLoading && representatives.length > 0 && draftsGenerated && (
           <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                6
+                5
               </span>
               <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Your Generated Messages</h2>
             </div>
@@ -1319,6 +1262,51 @@ export default function Home() {
                 );
               })()}
             </div>
+          </div>
+        )}
+
+        {/* Section 6: Sign In (for campaign management) */}
+        {messageSubmitted && !repsLoading && representatives.length > 0 && !session && (
+          <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                6
+              </span>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Sign In</h2>
+            </div>
+
+            {signInSuccess ? (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-800 font-medium">Check your email!</p>
+                <p className="text-blue-700 text-sm mt-2">
+                  We sent you a magic link to sign in. Click the link in your email to continue.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <p className="text-gray-600 text-sm">
+                  Sign in to create and manage campaigns.
+                </p>
+
+                <input
+                  type="email"
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="your.email@example.com"
+                  required
+                  disabled={signInLoading}
+                />
+
+                <button
+                  type="submit"
+                  className="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium disabled:opacity-50"
+                  disabled={!signInEmail || signInLoading}
+                >
+                  {signInLoading ? 'Sending magic link...' : 'Sign in with email'}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>

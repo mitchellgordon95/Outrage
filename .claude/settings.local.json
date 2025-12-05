@@ -15,7 +15,13 @@
       "Bash(psql:*)",
       "Bash(PGPASSWORD=\"$PGPASSWORD\" psql:*)",
       "Bash(openssl rand:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm view:*)",
+      "Bash(pg_dump:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
