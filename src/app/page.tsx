@@ -1266,7 +1266,7 @@ export default function Home() {
         )}
 
         {/* Section 6: Sign In (for campaign management) */}
-        {messageSubmitted && !repsLoading && representatives.length > 0 && !session && (
+        {messageSubmitted && !repsLoading && representatives.length > 0 && draftsGenerated && !session && (
           <div className="bg-white p-4 md:p-8 rounded-lg shadow-md mb-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
