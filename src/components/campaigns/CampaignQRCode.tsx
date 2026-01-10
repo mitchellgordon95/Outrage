@@ -161,14 +161,30 @@ export default function CampaignQRCode({ campaignUrl, campaignTitle }: CampaignQ
         </div>
       </div>
 
-      {/* Download button */}
-      <button
-        onClick={handleDownload}
-        disabled={isGenerating}
-        className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isGenerating ? 'Generating...' : 'Download QR Code'}
-      </button>
+      {/* Action buttons */}
+      <p className="text-xs text-blue-700 mb-3 text-center">
+        Want printed stickers? Download your design and order from Sticker Mule.
+      </p>
+      <div className="flex gap-3">
+        <button
+          onClick={handleDownload}
+          disabled={isGenerating}
+          className="flex-1 px-4 py-2 text-sm border-2 border-blue-600 text-blue-600 rounded hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isGenerating ? 'Generating...' : 'Download Image'}
+        </button>
+        <a
+          href="https://www.stickermule.com/unlock?ref_id=3679494801&utm_medium=link&utm_source=invite"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 px-4 py-2 text-sm bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors text-center inline-flex items-center justify-center gap-1"
+        >
+          Order Stickers
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+      </div>
     </div>
   );
 }
