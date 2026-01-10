@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Campaign } from '@/types/campaign';
 import Autocomplete from 'react-google-autocomplete';
 import MarkdownContent from '@/components/MarkdownContent';
+import CampaignQRCode from '@/components/campaigns/CampaignQRCode';
 
 export default function CampaignPage() {
   const params = useParams();
@@ -228,6 +229,12 @@ export default function CampaignPage() {
               Copy Link
             </button>
           </div>
+
+          {/* QR Code generator */}
+          <CampaignQRCode
+            campaignUrl={typeof window !== 'undefined' ? window.location.href : `${process.env.NEXT_PUBLIC_BASE_URL || ''}/campaigns/${campaignId}`}
+            campaignTitle={campaign.title}
+          />
         </div>
       </div>
     </main>

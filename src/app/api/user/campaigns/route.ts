@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { Campaign } from '@/types/campaign';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/user/campaigns - Get current user's campaigns
 export async function GET(request: NextRequest) {
   try {
